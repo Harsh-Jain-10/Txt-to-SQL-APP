@@ -3,12 +3,12 @@ import psycopg2
 from dotenv import load_dotenv
 from groq import Groq
 
-# Load environment variables and initialize Groq client
+# 1. Load database and LLM credentials from .env
 load_dotenv()
 client = Groq(api_key=os.getenv("LLM_API_KEY"))
 
 def ask_sql(question: str):
-    # Minimal schema context and instructions for PostgreSQL
+    # 2. Schema context & instructions prompting LLM for raw SQL
     prompt = (
         "You are a PostgreSQL expert. Table: digital_store_sales. "
         "Columns: order_id, customer_id, customer_city, customer_state, product_id, "
@@ -18,7 +18,7 @@ def ask_sql(question: str):
         f"Question: {question}"
     )
 
-    # Call Groq (trying llama-3.3-70b-versatile, llama-3.1-8b-instant, or active model)
+    # 3. Request SQL generation from Groq (llama-3.3-70b-versatile with fallback)
     for model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "openai/gpt-oss-120b"]:
         try:
             res = client.chat.completions.create(
@@ -28,10 +28,11 @@ def ask_sql(question: str):
         except Exception:
             continue
 
+    # 4. Strip markdown formatting to get clean executable SQL
     sql = res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
-    print(f"Generated SQL: {sql}")
+    print(f"Generated SQL: {sql}\nResults:")
 
-    # Connect via psycopg2, execute query, and print rows
+    # 5. Connect to PostgreSQL via psycopg2, execute query, and print structured rows
     conn = psycopg2.connect(
         dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"),
         host=os.getenv("DB_HOST", "localhost"), port=os.getenv("DB_PORT", "5432")
@@ -43,4 +44,5 @@ def ask_sql(question: str):
     conn.close()
 
 if __name__ == "__main__":
+    # Test query
     ask_sql("Show the top 5 cities with the highest number of orders")

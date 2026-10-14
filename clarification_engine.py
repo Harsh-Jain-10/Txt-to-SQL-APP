@@ -6,10 +6,19 @@ from groq import Groq
 from pydantic import BaseModel, Field
 from typing import List, Optional
 
+# Load environment credentials and configure Groq client
 load_dotenv()
-
 client = Groq(api_key=os.getenv("LLM_API_KEY"))
 MODEL_NAME = "llama-3.3-70b-versatile"
+
+# Helper function to call Groq with model fallback
+def call_groq(**kwargs):
+    for model in [MODEL_NAME, "llama-3.1-8b-instant", "openai/gpt-oss-120b"]:
+        try:
+            return client.chat.completions.create(model=model, **kwargs)
+        except Exception:
+            continue
+    raise RuntimeError("Unable to complete request with available Groq models.")
 
 # 1. Pydantic schema for structured intent analysis
 class ClarificationOption(BaseModel):
@@ -22,7 +31,7 @@ class IntentResult(BaseModel):
     clarification_question: Optional[str] = None
     options: List[ClarificationOption] = Field(default_factory=list)
 
-# 2. Analyze ambiguity in the question
+# 2. Analyze ambiguity in the question using Groq JSON mode
 def analyze_intent(question: str) -> IntentResult:
     prompt = f"""
     Analyze if this e-commerce analytics question is ambiguous.
@@ -40,8 +49,8 @@ def analyze_intent(question: str) -> IntentResult:
     }}
     """
     
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
+    # Request JSON response from Groq
+    response = call_groq(
         messages=[{"role": "user", "content": prompt}],
         response_format={"type": "json_object"},
         temperature=0.0
@@ -54,8 +63,8 @@ def analyze_intent(question: str) -> IntentResult:
 def execute_query(final_prompt: str):
     schema = "Table: digital_store_sales. Columns: customer_id, customer_city, price, payment_value, order_id, order_purchase_timestamp"
     
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
+    # Generate raw SQL from the disambiguated prompt
+    response = call_groq(
         messages=[
             {"role": "system", "content": f"Return ONLY raw PostgreSQL code. No markdown. Schema:\n{schema}"},
             {"role": "user", "content": f"{final_prompt}. Always add LIMIT 5 unless specified."}
@@ -65,6 +74,7 @@ def execute_query(final_prompt: str):
     sql = response.choices[0].message.content.strip().replace("```sql", "").replace("```", "")
     print(f"\n[Generated SQL]\n{sql}\n")
     
+    # Connect to PostgreSQL, execute the query, and display structured row output
     conn = psycopg2.connect(
         dbname=os.getenv("DB_NAME", "digital_store"),
         user=os.getenv("DB_USER"),
@@ -74,17 +84,18 @@ def execute_query(final_prompt: str):
     )
     cursor = conn.cursor()
     cursor.execute(sql)
-    print("[Results]")
+    print("[Results - Structured Output]")
     for row in cursor.fetchall():
         print(row)
     cursor.close()
     conn.close()
 
-# 4. Interactive loop
+# 4. Interactive disambiguation loop
 def ask_question(question: str):
     print(f"\nUser Query: {question}")
     intent = analyze_intent(question)
     
+    # If the user prompt is ambiguous, present multiple-choice clarification options
     if intent.is_ambiguous:
         print(f"\nClarification Needed: {intent.clarification_question}")
         for opt in intent.options:
@@ -96,6 +107,7 @@ def ask_question(question: str):
         print(f"\n-> Resolved request: {resolved_question}")
         execute_query(resolved_question)
     else:
+        # Prompt is already clear: execute SQL directly
         print("Intent is clear. Generating SQL directly...")
         execute_query(question)
 
