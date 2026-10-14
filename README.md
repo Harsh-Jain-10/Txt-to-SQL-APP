@@ -6,11 +6,12 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
 
 ## 🌟 Key Features
 
-- **Stage 3 Clarification Engine in Streamlit (`app.py`)**:
-  - **Pydantic Structured Output**: Defines `ClarificationOption` and `IntentAnalysis` models.
-  - **Ambiguity Detection**: Evaluates whether keywords like *"top"*, *"best"*, or *"valuable"* have multiple metrics in the database schema (e.g., total spend vs order count).
-  - **Interactive Disambiguation Buttons**: If ambiguous, displays the clarification question and renders interactive option buttons for the user to select.
-  - **Intent-Resolved SQL**: Combines the original question with the chosen metric to produce deterministic, accurate SQL.
+- **Stage 3 Clarification Engine with Strict Schema Grounding (`app.py`)**:
+  - **Pydantic Structured Output**: Defines `ClarificationOption` (including exact `sql_expression`) and `IntentAnalysis` models.
+  - **Strict Schema Guardrails**: Grounded strictly in `digital_store_sales` columns (`customer_id`, `price`, `payment_value`, `order_id`, etc.). Prevents hallucination of non-existent fields like customer names, ratings, or visits.
+  - **Interactive Formula Buttons**: Shows exact SQL formulas (e.g. `SUM(payment_value)`, `COUNT(DISTINCT order_id)`) on clarification buttons so the user knows exactly what is being calculated.
+  - **Formula Appending**: Appends the selected SQL expression to the query prompt, ensuring 100% deterministic, error-free PostgreSQL code generation.
+
 - **Interactive Tabular Output & Visualizations**:
   - Structured `pandas.DataFrame` rendered via `st.dataframe`.
   - Automatic bar chart visualization (`st.bar_chart`) for 2-column categorical/metric outputs.
