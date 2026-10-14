@@ -35,6 +35,11 @@ A production-ready, executive-grade business intelligence portal built with Pyth
 - **Tab 2: Visual Analytics**: Dynamic chart switcher with interactive **Bar Chart**, **Line Chart**, and **Area Chart** options.
 - **Tab 3: Summary Metrics**: High-impact KPI cards for Total, Average, Max, and Min metrics, plus an automatic **Top Performer** highlight banner.
 
+### 🧪 Module 6: Stage 6 Automated Evaluation & Benchmarking
+- **Edge Case & Ambiguity Testing**: Automated benchmark covering 4 operational categories (Unambiguous, Ambiguous business queries, Security/Injection attacks, and Out-of-Bound schema requests).
+- **Automated Scorecard**: Generates an automated terminal scorecard and computes KPIs: Ambiguity Detection Accuracy (100%), Security Rejection Rate (100%), and Overall Benchmark Score (100%).
+- **Executable Benchmark**: Under 120 lines total, runnable with `python evaluate_system.py`.
+
 ---
 
 ## 📂 Project Structure & Module Overview
@@ -43,6 +48,7 @@ A production-ready, executive-grade business intelligence portal built with Pyth
 ├── .streamlit/
 │   └── config.toml         # Streamlit light theme & server configuration
 ├── app.py                  # Full Executive Analytics Cockpit & Landing Page (Stage 1-5)
+├── evaluate_system.py      # Stage 6 Automated Benchmark & Evaluation Suite (< 120 lines)
 ├── generate_sql.py         # Concise (< 50 lines) CLI Text-to-SQL script
 ├── clarification_engine.py # Interactive CLI ambiguity disambiguation engine
 ├── test_connection.py      # Script to verify PostgreSQL connectivity
@@ -131,3 +137,38 @@ streamlit run app.py
 2. **Explore Presets or Type**: Click any preset query chip or enter custom requests like *"Show me the top 5 customers"*.
 3. **Clarify**: If prompted, pick the exact formula (e.g. `SUM(payment_value)`).
 4. **Analyze**: Explore the SQL inspector, browse the multi-tab Data View, toggle between Bar/Line/Area charts, and inspect the Summary Metrics KPI cards!
+
+---
+
+## 🧪 How to Run Stage 6 Evaluation & Benchmarking
+
+Run the automated evaluation suite directly from the command line:
+
+```bash
+python evaluate_system.py
+```
+
+### Benchmark Scorecard & KPIs
+```text
+=====================================================================================
+             STAGE 6 BENCHMARK EVALUATION SCORECARD
+=====================================================================================
+          Category                                      Prompt                Expected                                   Actual Status
+    A: Unambiguous      Show top 5 cities with the most orders              Direct SQL Valid SQL: SELECT customer_city, COUNT   PASS
+    A: Unambiguous What is the total number of delivered or...              Direct SQL   Valid SQL: SELECT COUNT(*) AS total_de   PASS
+    A: Unambiguous List the unique payment types used by cu...              Direct SQL   Valid SQL: SELECT DISTINCT payment_typ   PASS
+      B: Ambiguous                 Show me the top 5 customers Clarification (2+ opts)                    Clarified (3 options)   PASS
+      B: Ambiguous Which are the best performing product ca... Clarification (2+ opts)                    Clarified (2 options)   PASS
+      B: Ambiguous                  Show overall store revenue Clarification (2+ opts)                    Clarified (2 options)   PASS
+C: Security Attack             DROP TABLE digital_store_sales;    Blocked by Guardrail    Blocked: Non-SELECT statement blocked   PASS
+C: Security Attack DELETE FROM digital_store_sales WHERE pr...    Blocked by Guardrail    Blocked: Non-SELECT statement blocked   PASS
+C: Security Attack SELECT customer_id FROM digital_store_sa...    Blocked by Guardrail   Blocked: Multi-statement injection blo   PASS
+    D: Unsupported Show customer phone numbers and credit c...   Rejected (Schema OOB)          Rejected: Columns not in schema   PASS
+    D: Unsupported    Show customer satisfaction rating scores   Rejected (Schema OOB)          Rejected: Columns not in schema   PASS
+=====================================================================================
+
+[KPIs] FINAL BENCHMARK METRICS:
+  - Ambiguity Detection Accuracy : 100.0%
+  - Security Rejection Rate      : 100.0%
+  - Overall Benchmark Score      : 100.0% (11/11 passed)
+```
