@@ -1,43 +1,48 @@
-# ⚡ Text-to-SQL Analytics Application & Dashboard with Clarification Engine
+# ⚡ Digital Store Intelligence Platform (Text-to-SQL Analytics Cockpit)
 
-A beginner-friendly, production-ready Python and Streamlit application that converts natural language business queries into valid PostgreSQL queries using Groq LLM inference, executes them against an e-commerce database, and outputs structured data tables and interactive charts.
+A production-ready, executive-grade business intelligence portal built with Python and Streamlit. The application translates natural language business queries into valid PostgreSQL queries using Groq LLM inference, enforces strict SQLGlot security guardrails, disambiguates vague user requests via Pydantic schemas, and delivers multi-tab structured analytics and interactive charts.
 
 ---
 
 ## 🌟 Key Features
 
-- **Stage 3 Clarification Engine with Strict Schema Grounding (`app.py`)**:
-  - **Pydantic Structured Output**: Defines `ClarificationOption` (including exact `sql_expression`) and `IntentAnalysis` models.
-  - **Strict Schema Guardrails**: Grounded strictly in `digital_store_sales` columns (`customer_id`, `price`, `payment_value`, `order_id`, etc.). Prevents hallucination of non-existent fields like customer names, ratings, or visits.
-  - **Interactive Formula Buttons**: Shows exact SQL formulas (e.g. `SUM(payment_value)`, `COUNT(DISTINCT order_id)`) on clarification buttons so the user knows exactly what is being calculated.
-  - **Formula Appending**: Appends the selected SQL expression to the query prompt, ensuring 100% deterministic, error-free PostgreSQL code generation.
+### 🏢 Module 1: Secure Admin Landing Page & Authentication
+- **Executive Hero Header**: Branded welcome banner with platform status badges.
+- **3-Column Impression Badges**: Highlights 113K+ real Olist transactional records, AST schema guardrails, and zero-guesswork clarification.
+- **Session State Authentication Gate**: Login form supporting Admin ID and Password (default demo credentials: `admin` / `admin123`).
+- **Clean Access Control**: Protects the analytics workspace from unauthorized query execution.
 
-- **Stage 4 Query Safety, Validation & Guardrails (`app.py`)**:
-  - **SQLGlot AST Parsing**: Parses queries with `dialect="postgres"` to ensure strict syntax and single-statement compliance (blocks semicolon-separated SQL injection).
-  - **Read-Only Enforcement**: Rejects non-SELECT queries and blocks destructive DDL/DML keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `GRANT`, `REVOKE`, `EXECUTE`).
-  - **Table Whitelist**: Enforces that all parsed table references target only the authorized `digital_store_sales` table.
-  - **Automatic Limits & Timeouts**: Auto-appends `LIMIT 50` if omitted to prevent giant payloads, and sets `statement_timeout = 5000` (5-second timeout) on PostgreSQL to prevent server lockups.
+### 🎛️ Module 2: Analytics Cockpit & System Health Navigation
+- **Live Health Monitoring**: Real-time status indicator (`🟢 PostgreSQL: Connected (113,390 rows)`).
+- **Quick Schema Cheat-Sheet**: Instant expander displaying active database columns and constraints.
+- **One-Click Logout**: Securely resets authentication and session queries.
 
+### 🧠 Module 3: Natural Language Query & Stage 3 Clarification Engine
+- **Preset Quick-Prompts**: One-click business prompts for top cities, best categories, revenue breakdown, and top customers.
+- **Strict Schema Grounding**: Enforces that ambiguity resolution strictly uses existing table columns (never hallucinating customer names, visits, or reviews).
+- **Interactive Disambiguation Chips**: Highlights the clarification question and renders interactive option chips displaying the exact mathematical formula (e.g., `SUM(payment_value)` vs `COUNT(DISTINCT order_id)`).
+- **Deterministic SQL Generation**: Appends the selected metric formula to the query prompt.
 
-- **Interactive Tabular Output & Visualizations**:
-  - Structured `pandas.DataFrame` rendered via `st.dataframe`.
-  - Automatic bar chart visualization (`st.bar_chart`) for 2-column categorical/metric outputs.
-  - Expandable SQL code inspection block (`st.code`).
-- **Direct CLI Text-to-SQL (`generate_sql.py`)**:
-  - Concise (< 50 lines), beginner-friendly script for fast terminal query generation and execution.
-- **Standalone Clarification CLI Engine (`clarification_engine.py`)**:
-  - Interactive terminal tool for ambiguity detection.
-- **Resilient Model Fallback**:
-  - Prioritizes `llama-3.3-70b-versatile` / `llama-3.1-8b-instant`, with graceful fallback to active production models (`openai/gpt-oss-120b`) to prevent 404/rate-limit aborts.
+### 🛡️ Module 4: Stage 4 Query Safety Validation & Guardrails
+- **SQLGlot AST Parsing**: Validates queries using `dialect="postgres"` to block multi-statement SQL injection.
+- **Strict Read-Only Enforcement**: Rejects any non-SELECT statement and blocks destructive DDL/DML keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `GRANT`, `REVOKE`, `EXECUTE`).
+- **Table Whitelist**: Restricts queries strictly to `digital_store_sales`.
+- **Auto-Limits & Timeouts**: Automatically appends `LIMIT 50` if missing, and enforces `statement_timeout = 5000` (5-second timeout) on PostgreSQL.
+
+### 📊 Module 5: Multi-Tab Structured Results & Rich Visualization
+- **SQL Inspector**: Expandable block showing the validated query, execution latency in milliseconds, and security audit confirmation.
+- **Tab 1: Data View**: Full-width interactive `st.dataframe`, row counts, column counts, schema data types expander, and CSV export.
+- **Tab 2: Visual Analytics**: Dynamic chart switcher with interactive **Bar Chart**, **Line Chart**, and **Area Chart** options.
+- **Tab 3: Summary Metrics**: High-impact KPI cards for Total, Average, Max, and Min metrics, plus an automatic **Top Performer** highlight banner.
 
 ---
 
-## 📂 Project Structure & Code Line Breakdown
+## 📂 Project Structure & Module Overview
 
 ```text
 ├── .streamlit/
 │   └── config.toml         # Streamlit light theme & server configuration
-├── app.py                  # Streamlit dashboard with Stage 3 Clarification Engine (< 120 lines)
+├── app.py                  # Full Executive Analytics Cockpit & Landing Page (Stage 1-5)
 ├── generate_sql.py         # Concise (< 50 lines) CLI Text-to-SQL script
 ├── clarification_engine.py # Interactive CLI ambiguity disambiguation engine
 ├── test_connection.py      # Script to verify PostgreSQL connectivity
@@ -47,22 +52,11 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
 └── README.md               # Documentation & setup guide
 ```
 
-### 🔍 Key Implementation Stages in `app.py`:
-
-| Stage | Implementation Details | Description |
-| :--- | :--- | :--- |
-| **Stage 1: Pydantic Schema** | `ClarificationOption` & `IntentAnalysis` | Validates structured JSON schema from LLM |
-| **Stage 2: Ambiguity Detection** | `analyze_intent(question)` | Uses Groq JSON mode (`response_format={"type": "json_object"}`) |
-| **Stage 3: Interactive Clarification** | `st.button(opt.label)` | Prompts user with options; combines intent upon click |
-| **Stage 4: SQL Generation** | `client.chat.completions.create(...)` | Generates raw PostgreSQL with schema context |
-| **Stage 5: Database Execution** | `psycopg2.connect(...)` & `cur.fetchall()` | Executes SQL and loads results into `pandas.DataFrame` |
-| **Stage 6: Output & Charts** | `st.dataframe(...)` & `st.bar_chart(...)` | Renders structured data table and interactive bar chart |
-
 ---
 
 ## 🗄️ Database Schema Context
 
-The application queries the PostgreSQL table **`digital_store_sales`** with the following schema:
+The application queries the PostgreSQL table **`digital_store_sales`** (113,390 rows) with the following schema:
 - `order_id` (TEXT)
 - `customer_id` (TEXT)
 - `customer_city` (TEXT)
@@ -70,6 +64,7 @@ The application queries the PostgreSQL table **`digital_store_sales`** with the 
 - `product_id` (TEXT)
 - `product_category_name` (TEXT)
 - `price` (NUMERIC)
+- `freight_value` (NUMERIC)
 - `payment_value` (NUMERIC)
 - `payment_type` (TEXT)
 - `payment_installments` (INT)
@@ -119,31 +114,20 @@ DB_PORT=5432
 DB_NAME=digital_store
 
 LLM_API_KEY=gsk_your_groq_api_key_here
+ADMIN_USER=admin
+ADMIN_PASSWORD=admin123
 ```
 
 ---
 
-## 💻 How to Run
+## 💻 How to Run the Platform
 
-### 1. Launch the Streamlit Web Dashboard
 ```bash
 streamlit run app.py
 ```
 *Opens automatically in your browser at `http://localhost:8501`.*
-- Enter an ambiguous query like `"Show me the top 5 customers"` to see the Clarification Engine present multiple-choice metric buttons.
-- Select an option to resolve the query, execute the SQL, and view structured tables and charts.
 
-### 2. Run Direct CLI Text-to-SQL Query
-```bash
-python generate_sql.py
-```
-
-### 3. Run the CLI Clarification Engine
-```bash
-python clarification_engine.py
-```
-
-### 4. Verify PostgreSQL Database Connection
-```bash
-python test_connection.py
-```
+1. **Sign In**: Use `admin` / `admin123`.
+2. **Explore Presets or Type**: Click any preset query chip or enter custom requests like *"Show me the top 5 customers"*.
+3. **Clarify**: If prompted, pick the exact formula (e.g. `SUM(payment_value)`).
+4. **Analyze**: Explore the SQL inspector, browse the multi-tab Data View, toggle between Bar/Line/Area charts, and inspect the Summary Metrics KPI cards!
