@@ -1,4 +1,4 @@
-# ⚡ Text-to-SQL Analytics Application & Admin Dashboard
+# ⚡ Text-to-SQL Analytics Application & Dashboard with Clarification Engine
 
 A beginner-friendly, production-ready Python and Streamlit application that converts natural language business queries into valid PostgreSQL queries using Groq LLM inference, executes them against an e-commerce database, and outputs structured data tables and interactive charts.
 
@@ -6,24 +6,19 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
 
 ## 🌟 Key Features
 
-- **Executive Admin Landing Page & Authentication (`app.py`)**:
-  - Branded executive portal: **"Welcome to Digital Store Admin Panel"**.
-  - Secure credential gate protecting the analytics workspace (Default Demo Credentials: `admin` / `admin123`).
-  - Session state-backed authentication with one-click logout.
-- **Modern Light Enterprise Theme**:
-  - Professional, clean light-mode aesthetic configured via `.streamlit/config.toml` and custom CSS.
-  - High-impact KPI ribbon (Total Catalog Orders, Database status, AI Engine, Active Theme).
-- **Interactive Business Intelligence Platform**:
-  - Instant natural language business question input with 5 one-click preset templates in the sidebar.
-  - Expandable viewer to inspect generated raw PostgreSQL queries.
-  - **Structured Tabular Output**: Converts raw database rows into an interactive `pandas.DataFrame` rendered with `st.dataframe`.
-  - **Auto-Visualization**: Automatically plots interactive tabbed bar and line charts (`st.bar_chart`, `st.line_chart`) for multi-dimensional data.
-  - **CSV Export**: Instant download button to export query results directly to CSV.
+- **Stage 3 Clarification Engine in Streamlit (`app.py`)**:
+  - **Pydantic Structured Output**: Defines `ClarificationOption` and `IntentAnalysis` models.
+  - **Ambiguity Detection**: Evaluates whether keywords like *"top"*, *"best"*, or *"valuable"* have multiple metrics in the database schema (e.g., total spend vs order count).
+  - **Interactive Disambiguation Buttons**: If ambiguous, displays the clarification question and renders interactive option buttons for the user to select.
+  - **Intent-Resolved SQL**: Combines the original question with the chosen metric to produce deterministic, accurate SQL.
+- **Interactive Tabular Output & Visualizations**:
+  - Structured `pandas.DataFrame` rendered via `st.dataframe`.
+  - Automatic bar chart visualization (`st.bar_chart`) for 2-column categorical/metric outputs.
+  - Expandable SQL code inspection block (`st.code`).
 - **Direct CLI Text-to-SQL (`generate_sql.py`)**:
   - Concise (< 50 lines), beginner-friendly script for fast terminal query generation and execution.
-- **Ambiguity Detection & Clarification Engine (`clarification_engine.py`)**:
-  - Uses Pydantic schemas and Groq JSON mode to detect vague phrasing (e.g., "top customers").
-  - Prompts users with multiple-choice definitions before query execution.
+- **Standalone Clarification CLI Engine (`clarification_engine.py`)**:
+  - Interactive terminal tool for ambiguity detection.
 - **Resilient Model Fallback**:
   - Prioritizes `llama-3.3-70b-versatile` / `llama-3.1-8b-instant`, with graceful fallback to active production models (`openai/gpt-oss-120b`) to prevent 404/rate-limit aborts.
 
@@ -34,9 +29,9 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
 ```text
 ├── .streamlit/
 │   └── config.toml         # Streamlit light theme & server configuration
-├── app.py                  # Executive Admin Dashboard with landing page, tables & charts
+├── app.py                  # Streamlit dashboard with Stage 3 Clarification Engine (< 120 lines)
 ├── generate_sql.py         # Concise (< 50 lines) CLI Text-to-SQL script
-├── clarification_engine.py # Interactive ambiguity disambiguation engine
+├── clarification_engine.py # Interactive CLI ambiguity disambiguation engine
 ├── test_connection.py      # Script to verify PostgreSQL connectivity
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Ignores credentials, venv, and large datasets
@@ -44,19 +39,16 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
 └── README.md               # Documentation & setup guide
 ```
 
-### 🔍 Key Implementation Lines in `app.py`:
+### 🔍 Key Implementation Stages in `app.py`:
 
-| Feature | Code Lines in `app.py` | Description |
+| Stage | Implementation Details | Description |
 | :--- | :--- | :--- |
-| **Authentication & Gate** | `st.session_state.authenticated` | Checks login state; renders executive landing page if unauthenticated |
-| **LLM Query Generation** | `client.chat.completions.create(...)` | Sends schema prompt to Groq and extracts raw SQL |
-| **PostgreSQL Execution** | `conn = psycopg2.connect(...)` & `cur.execute(sql)` | Executes generated SQL query on PostgreSQL |
-| **Structured Tabular Output** | `df = pd.DataFrame(rows, columns=columns)` | Maps raw database tuples to structured table |
-| **Interactive Data Table** | `st.dataframe(df, use_container_width=True)` | Renders clean, scrollable, interactive table in the UI |
-| **Summary Metrics** | `st.metric(label="Rows Returned", value=len(df))` | Shows high-impact row count card |
-| **Chart Visualization** | `st.bar_chart(...)` & `st.line_chart(...)` | Plots interactive bar and line charts for categorical/numeric data |
-| **Data Export** | `st.download_button(...)` | Allows one-click CSV export of generated tabular results |
-| **Error Handling** | `st.error(f"Execution Error: {e}")` | Catches exceptions and displays clean UI alerts |
+| **Stage 1: Pydantic Schema** | `ClarificationOption` & `IntentAnalysis` | Validates structured JSON schema from LLM |
+| **Stage 2: Ambiguity Detection** | `analyze_intent(question)` | Uses Groq JSON mode (`response_format={"type": "json_object"}`) |
+| **Stage 3: Interactive Clarification** | `st.button(opt.label)` | Prompts user with options; combines intent upon click |
+| **Stage 4: SQL Generation** | `client.chat.completions.create(...)` | Generates raw PostgreSQL with schema context |
+| **Stage 5: Database Execution** | `psycopg2.connect(...)` & `cur.fetchall()` | Executes SQL and loads results into `pandas.DataFrame` |
+| **Stage 6: Output & Charts** | `st.dataframe(...)` & `st.bar_chart(...)` | Renders structured data table and interactive bar chart |
 
 ---
 
@@ -125,20 +117,20 @@ LLM_API_KEY=gsk_your_groq_api_key_here
 
 ## 💻 How to Run
 
-### 1. Launch the Streamlit Web Dashboard (Recommended)
+### 1. Launch the Streamlit Web Dashboard
 ```bash
 streamlit run app.py
 ```
 *Opens automatically in your browser at `http://localhost:8501`.*
-- **Landing Page**: Sign in using `admin` / `admin123`.
-- **Dashboard**: Explore preset queries, enter custom natural language prompts, inspect SQL, view structured tables, and analyze interactive charts!
+- Enter an ambiguous query like `"Show me the top 5 customers"` to see the Clarification Engine present multiple-choice metric buttons.
+- Select an option to resolve the query, execute the SQL, and view structured tables and charts.
 
 ### 2. Run Direct CLI Text-to-SQL Query
 ```bash
 python generate_sql.py
 ```
 
-### 3. Run the Interactive Ambiguity Clarification Engine
+### 3. Run the CLI Clarification Engine
 ```bash
 python clarification_engine.py
 ```
@@ -147,14 +139,3 @@ python clarification_engine.py
 ```bash
 python test_connection.py
 ```
-
----
-
-## 📦 Requirements
-
-- `streamlit`
-- `pandas`
-- `psycopg2-binary`
-- `groq`
-- `python-dotenv`
-- `pydantic`
