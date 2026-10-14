@@ -4,3 +4,4 @@ python-dotenv>=1.2.4
 pydantic
 streamlit
 pandas
+sqlglot

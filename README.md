@@ -12,6 +12,13 @@ A beginner-friendly, production-ready Python and Streamlit application that conv
   - **Interactive Formula Buttons**: Shows exact SQL formulas (e.g. `SUM(payment_value)`, `COUNT(DISTINCT order_id)`) on clarification buttons so the user knows exactly what is being calculated.
   - **Formula Appending**: Appends the selected SQL expression to the query prompt, ensuring 100% deterministic, error-free PostgreSQL code generation.
 
+- **Stage 4 Query Safety, Validation & Guardrails (`app.py`)**:
+  - **SQLGlot AST Parsing**: Parses queries with `dialect="postgres"` to ensure strict syntax and single-statement compliance (blocks semicolon-separated SQL injection).
+  - **Read-Only Enforcement**: Rejects non-SELECT queries and blocks destructive DDL/DML keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `GRANT`, `REVOKE`, `EXECUTE`).
+  - **Table Whitelist**: Enforces that all parsed table references target only the authorized `digital_store_sales` table.
+  - **Automatic Limits & Timeouts**: Auto-appends `LIMIT 50` if omitted to prevent giant payloads, and sets `statement_timeout = 5000` (5-second timeout) on PostgreSQL to prevent server lockups.
+
+
 - **Interactive Tabular Output & Visualizations**:
   - Structured `pandas.DataFrame` rendered via `st.dataframe`.
   - Automatic bar chart visualization (`st.bar_chart`) for 2-column categorical/metric outputs.
