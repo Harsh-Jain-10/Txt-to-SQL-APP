@@ -7,13 +7,7 @@ from groq import Groq
 load_dotenv()
 client = Groq(api_key=os.getenv("LLM_API_KEY"))
 
-def ask_sql(question: str) -> None:
-    """
-    Generate and execute a SQL query against PostgreSQL using Groq LLM inference.
-
-    Args:
-        question: Natural language e-commerce analytics question.
-    """
+def ask_sql(question: str):
     # 2. Schema context & instructions prompting LLM for raw SQL
     prompt = (
         "You are a PostgreSQL expert. Table: digital_store_sales. "
