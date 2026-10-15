@@ -10,10 +10,15 @@ client = Groq(api_key=os.getenv("LLM_API_KEY"))
 
 # 1. Pydantic Schemas & Schema Grounding
 class ClarificationOption(BaseModel):
-    id: int = 1; label: str = ""; metric_description: str = ""; sql_expression: str = ""
+    id: int = 1
+    label: str = ""
+    metric_description: str = ""
+    sql_expression: str = ""
 
 class IntentAnalysis(BaseModel):
-    is_ambiguous: bool; is_supported: bool = True; question: Optional[str] = None
+    is_ambiguous: bool
+    is_supported: bool = True
+    question: Optional[str] = None
     options: List[ClarificationOption] = Field(default_factory=list)
 
 SCHEMA = (
