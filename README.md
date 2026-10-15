@@ -172,3 +172,12 @@ C: Security Attack SELECT customer_id FROM digital_store_sa...    Blocked by Gua
   - Security Rejection Rate      : 100.0%
   - Overall Benchmark Score      : 100.0% (11/11 passed)
 ```
+
+### Running the Full Test Suite (`tests/run_eval.py`)
+
+To run the full multi-category benchmark evaluation with gold SQL execution checks:
+
+```bash
+python tests/run_eval.py
+```
+
