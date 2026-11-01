@@ -6,3 +6,4 @@ streamlit
 pandas
 sqlglot
 plotly
+streamlit-mic-recorder

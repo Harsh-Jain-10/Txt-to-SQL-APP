@@ -1,4 +1,4 @@
-import os, json, time
+import os, json, time, io
 from decimal import Decimal
 import streamlit as st
 import pandas as pd
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from streamlit_mic_recorder import mic_recorder
 
 load_dotenv()
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
@@ -68,6 +69,21 @@ def call_groq(messages, json_mode=False):
         except Exception:
             continue
     raise RuntimeError("Unable to complete request with available Groq models.")
+
+# =============================================================================
+# 2b. Groq Whisper Speech-to-Text
+# =============================================================================
+def transcribe_audio(audio_bytes: bytes) -> str:
+    """Send raw audio bytes to Groq Whisper and return the transcribed text."""
+    audio_file = io.BytesIO(audio_bytes)
+    audio_file.name = "recording.wav"
+    transcription = client.audio.transcriptions.create(
+        model="whisper-large-v3",
+        file=audio_file,
+        response_format="text",
+        language="en",
+    )
+    return transcription.strip() if isinstance(transcription, str) else transcription.text.strip()
 
 # =============================================================================
 # 3. Query Safety Validation & Guardrails (SQLGlot)
@@ -434,6 +450,17 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
 .followup-chip button { border-radius: 9999px !important; font-size: 13px !important; background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; color: #0F172A !important; height: 36px !important; }
 .followup-chip button:hover { border-color: #2563EB !important; color: #2563EB !important; }
 .status-pill { display: inline-block; padding: 4px 12px; font-size: 12px; font-weight: 500; border-radius: 9999px; background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+/* Mic recorder button styling */
+[data-testid="stColumn"] button[title="Record"], [data-testid="stColumn"] button[title="Stop recording"] {
+    height: 44px !important; width: 44px !important; min-width: 44px !important;
+    border-radius: 8px !important; border: 1px solid #CBD5E1 !important;
+    background: #FFFFFF !important; font-size: 18px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    transition: border-color 0.15s, background 0.15s !important;
+}
+[data-testid="stColumn"] button[title="Stop recording"] {
+    background: #FEF2F2 !important; border-color: #FCA5A5 !important; color: #DC2626 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -546,13 +573,42 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
                     st.rerun()
 
         st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
-        query_col, btn_col = st.columns([5, 1], vertical_alignment="bottom")
+        query_col, mic_col, btn_col = st.columns([5, 0.6, 1], vertical_alignment="bottom")
         with query_col:
             q_input = st.text_input(
                 "Enter your business query:",
                 value=st.session_state.current_input,
                 placeholder="e.g. Show top 5 customer cities by total spending"
             )
+        with mic_col:
+            st.markdown(
+                '<div style="padding-bottom: 4px;">'
+                '<div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 6px;">Voice</div>',
+                unsafe_allow_html=True
+            )
+            audio = mic_recorder(
+                start_prompt="🎙️",
+                stop_prompt="⏹️",
+                just_once=True,
+                use_container_width=True,
+                key="voice_input"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # --- Handle voice transcription ---
+        if audio and audio.get("bytes"):
+            with st.spinner("Transcribing voice…"):
+                try:
+                    transcript = transcribe_audio(audio["bytes"])
+                    if transcript:
+                        st.session_state.current_input = transcript
+                        st.session_state.clarify_data = None
+                        st.session_state.executed_data = None
+                        st.session_state.trigger_run = True
+                        st.rerun()
+                except Exception as e:
+                    st.warning(f"Voice transcription failed: {e}")
+
         with btn_col:
             is_empty = not bool(q_input and q_input.strip())
             run_btn = st.button("Analyze & Query", icon=":material/search:", type="primary", use_container_width=True, disabled=is_empty)
