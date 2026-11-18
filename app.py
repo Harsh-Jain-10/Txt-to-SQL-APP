@@ -2,7 +2,14 @@ import os, json, time, io
 from decimal import Decimal
 import streamlit as st
 import pandas as pd
-import psycopg2
+try:
+    import psycopg2
+except Exception:
+    psycopg2 = None
+try:
+    import pg8000.dbapi
+except Exception:
+    pg8000 = None
 import sqlglot
 from sqlglot import exp
 import plotly.express as px
@@ -54,7 +61,7 @@ METRIC_RULES = (
     "- Row limits: Only include LIMIT if explicitly requested by user (e.g. 'top 5') or defaulted as above (TOP 10). Never invent arbitrary LIMIT values."
 )
 
-COLOR_PALETTE = ["#2563EB", "#0EA5E9", "#14B8A6", "#F59E0B", "#8B5CF6", "#64748B"]
+COLOR_PALETTE = ["#6366F1", "#EC4899", "#06B6D4", "#F59E0B", "#10B981", "#8B5CF6", "#3B82F6"]
 
 # =============================================================================
 # 2. LLM Fallback Caller
@@ -184,23 +191,45 @@ def generate_insight(rows: list, title: str) -> str:
 # 5. Database Runner
 # =============================================================================
 def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME", "digital_store"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "digital_store")
+    user = os.getenv("DB_USER")
+    password = os.getenv("DB_PASSWORD")
+    host = os.getenv("DB_HOST", "localhost")
+    port = int(os.getenv("DB_PORT", "5432"))
+
+    if psycopg2 is not None:
+        try:
+            return psycopg2.connect(
+                dbname=db_name,
+                user=user,
+                password=password,
+                host=host,
+                port=port
+            )
+        except Exception:
+            pass
+
+    import pg8000.dbapi
+    return pg8000.dbapi.connect(
+        database=db_name,
+        user=user,
+        password=password,
+        host=host,
+        port=port
     )
 
 def run_sql(sql: str) -> tuple[pd.DataFrame, float, Optional[str]]:
     start_time = time.time()
     try:
         conn = get_db_connection()
-        with conn.cursor() as cur:
+        cur = conn.cursor()
+        try:
             cur.execute("SET statement_timeout = 10000;")
             cur.execute(sql)
             columns = [d[0] for d in cur.description]
             rows = cur.fetchall()
+        finally:
+            cur.close()
         conn.close()
         latency = round((time.time() - start_time) * 1000, 2)
         return pd.DataFrame(rows, columns=columns), latency, None
@@ -319,7 +348,8 @@ def render_auto_chart(df: pd.DataFrame, orig_title: str, metric_label: Optional[
         elif is_state_chart:
             s_col = state_cols[0]
             sorted_state = chart_df.sort_values(by=n_col, ascending=True)
-            colors = ["#2563EB" if i == len(sorted_state) - 1 else "#93C5FD" for i in range(len(sorted_state))]
+            vibrant_seq = ["#6366F1", "#8B5CF6", "#A855F7", "#D946EF", "#EC4899", "#F43F5E", "#FB7185", "#38BDF8", "#06B6D4", "#10B981"]
+            colors = [vibrant_seq[i % len(vibrant_seq)] for i in range(len(sorted_state))]
             fig = px.bar(sorted_state, x=n_col, y=s_col, orientation='h', labels=labels)
             fig.update_traces(marker_color=colors)
         elif cat_cols:
@@ -331,7 +361,8 @@ def render_auto_chart(df: pd.DataFrame, orig_title: str, metric_label: Optional[
                 other_row = pd.DataFrame([{c_col: "Other", n_col: other_val}])
                 chart_df = pd.concat([top10, other_row], ignore_index=True)
             sorted_bar = chart_df.sort_values(by=n_col, ascending=True)
-            colors = ["#2563EB" if i == len(sorted_bar) - 1 else "#93C5FD" for i in range(len(sorted_bar))]
+            vibrant_seq = ["#6366F1", "#8B5CF6", "#A855F7", "#D946EF", "#EC4899", "#F43F5E", "#FB7185", "#38BDF8", "#06B6D4", "#10B981"]
+            colors = [vibrant_seq[i % len(vibrant_seq)] for i in range(len(sorted_bar))]
             fig = px.bar(sorted_bar, x=n_col, y=c_col, orientation='h', labels=labels)
             fig.update_traces(marker_color=colors)
         else:
@@ -413,53 +444,335 @@ def render_auto_chart(df: pd.DataFrame, orig_title: str, metric_label: Optional[
 # =============================================================================
 def run_app():
     st.set_page_config(
-        page_title="Digital Store Intelligence Platform",
+        page_title="Clari Analyzer",
         layout="wide"
     )
 
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 html, body, [data-testid="stApp"], button, input, textarea {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
     color: #0F172A;
 }
+
+[data-testid="stApp"] {
+    background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.06) 0px, transparent 50%),
+                #F8FAFC !important;
+}
+
 [data-testid="stMainBlockContainer"], .block-container {
-    max-width: 1100px !important;
-    padding-top: 32px !important;
+    max-width: 1140px !important;
+    padding-top: 24px !important;
+    padding-bottom: 48px !important;
     margin: 0 auto !important;
 }
+
 [data-testid="stHeaderActionElements"] { display: none !important; }
-h1 { font-size: 28px !important; font-weight: 600 !important; line-height: 1.2 !important; margin-bottom: 4px !important; }
-.header-sub { font-size: 15px !important; color: #475569 !important; margin-bottom: 24px !important; }
-.active-query { background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid #2563EB; border-radius: 8px; padding: 12px 16px; font-size: 15px; color: #0F172A; margin: 16px 0; }
-.neutral-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; font-size: 14px; color: #0F172A; margin: 16px 0; }
-.option-card { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; transition: border-color 0.15s ease; height: 100%; margin-bottom: 8px; }
-.option-card:hover { border-color: #2563EB; }
-[data-baseweb="input"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; height: 44px !important; background: #FFFFFF !important; }
-[data-baseweb="input"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 2px rgba(37,99,235,0.15) !important; }
-[data-testid="stBaseButton-primary"] { height: 44px !important; background-color: #2563EB !important; color: #FFFFFF !important; font-size: 15px !important; font-weight: 500 !important; border-radius: 8px !important; border: none !important; }
-[data-testid="stBaseButton-primary"]:hover { background-color: #1D4ED8 !important; }
-[data-testid="stBaseButton-primary"]:disabled { background-color: #94A3B8 !important; cursor: not-allowed !important; opacity: 0.6 !important; }
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] { height: 36px !important; min-height: 36px !important; font-size: 13px !important; justify-content: flex-start !important; text-align: left !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; color: #0F172A !important; border-radius: 8px !important; padding: 0 12px !important; width: 100% !important; }
-[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover { border-color: #CBD5E1 !important; background: #F8FAFC !important; }
-[data-testid="stRadio"] label p { font-size: 13px !important; }
-[data-testid="stMetricValue"] { font-size: 28px !important; font-weight: 600 !important; }
-[data-testid="stCodeBlock"] { background-color: #F1F5F9 !important; border-radius: 8px !important; }
-code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; font-size: 13px !important; }
-.followup-chip button { border-radius: 9999px !important; font-size: 13px !important; background: #FFFFFF !important; border: 1px solid #E2E8F0 !important; color: #0F172A !important; height: 36px !important; }
-.followup-chip button:hover { border-color: #2563EB !important; color: #2563EB !important; }
-.status-pill { display: inline-block; padding: 4px 12px; font-size: 12px; font-weight: 500; border-radius: 9999px; background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
-/* Mic recorder button styling */
+
+/* Hero Banner */
+.hero-banner {
+    background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(245,243,255,0.95) 50%, rgba(253,242,248,0.92) 100%);
+    border: 1px solid rgba(224, 231, 255, 0.9);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 22px;
+    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #06B6D4);
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #EEF2FF, #FAF5FF);
+    border: 1px solid #C7D2FE;
+    color: #4F46E5;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    margin-bottom: 8px;
+}
+
+.hero-title {
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em;
+    line-height: 1.15 !important;
+    margin: 0 0 6px 0 !important;
+    color: #0F172A;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 40%, #DB2777 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+    font-size: 14.5px !important;
+    color: #475569 !important;
+    line-height: 1.5 !important;
+    margin-bottom: 12px !important;
+}
+
+.tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.tech-pill {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 11px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.pill-violet { background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; }
+.pill-pink   { background: #FDF2F8; color: #BE185D; border: 1px solid #FBCFE8; }
+.pill-cyan   { background: #ECFEFF; color: #0E7490; border: 1px solid #A5F3FC; }
+.pill-amber  { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+
+/* Inputs and Forms */
+[data-baseweb="input"] {
+    border: 2px solid #E2E8F0 !important;
+    border-radius: 12px !important;
+    height: 48px !important;
+    background: #FFFFFF !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+}
+[data-baseweb="input"]:focus-within {
+    border-color: #6366F1 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Primary Action Buttons */
+[data-testid="stBaseButton-primary"] {
+    height: 48px !important;
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #DB2777 100%) !important;
+    color: #FFFFFF !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+[data-testid="stBaseButton-primary"]:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45) !important;
+    filter: brightness(1.05) !important;
+}
+[data-testid="stBaseButton-primary"]:disabled {
+    background: #CBD5E1 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+
+/* Mic Button */
 [data-testid="stColumn"] button[title="Record"], [data-testid="stColumn"] button[title="Stop recording"] {
-    height: 44px !important; width: 44px !important; min-width: 44px !important;
-    border-radius: 8px !important; border: 1px solid #CBD5E1 !important;
-    background: #FFFFFF !important; font-size: 18px !important;
-    display: flex !important; align-items: center !important; justify-content: center !important;
-    transition: border-color 0.15s, background 0.15s !important;
+    height: 48px !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    border-radius: 12px !important;
+    border: 2px solid #C7D2FE !important;
+    background: linear-gradient(135deg, #EEF2FF, #FAF5FF) !important;
+    font-size: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15) !important;
+}
+[data-testid="stColumn"] button[title="Record"]:hover {
+    transform: translateY(-1px) scale(1.03) !important;
+    border-color: #8B5CF6 !important;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3) !important;
 }
 [data-testid="stColumn"] button[title="Stop recording"] {
-    background: #FEF2F2 !important; border-color: #FCA5A5 !important; color: #DC2626 !important;
+    background: linear-gradient(135deg, #FEE2E2, #FECDD3) !important;
+    border-color: #F87171 !important;
+    color: #DC2626 !important;
+    animation: pulse-red 1.5s infinite !important;
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Presets & Followup Buttons */
+.preset-btn button {
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    background: #FFFFFF !important;
+    border: 1.5px solid #E2E8F0 !important;
+    color: #1E293B !important;
+    height: 42px !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03) !important;
+}
+.preset-btn button:hover {
+    border-color: #8B5CF6 !important;
+    background: linear-gradient(135deg, #F5F3FF, #FFFFFF) !important;
+    color: #6D28D9 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.15) !important;
+}
+
+/* Cards */
+.active-query {
+    background: linear-gradient(90deg, #F5F3FF 0%, #FFFFFF 100%);
+    border: 1px solid #DDD6FE;
+    border-left: 4px solid #7C3AED;
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15px;
+    color: #0F172A;
+    margin: 18px 0;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.06);
+}
+
+.neutral-card {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 18px;
+    font-size: 14px;
+    color: #0F172A;
+    margin: 16px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.option-card {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1.5px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 18px;
+    transition: all 0.2s ease;
+    height: 100%;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+.option-card:hover {
+    border-color: #8B5CF6;
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Metric styling */
+[data-testid="stMetric"] {
+    background: #FFFFFF !important;
+    border: 1px solid #E0E7FF !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.04) !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    color: #4F46E5 !important;
+}
+
+/* Login Card */
+.login-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(224, 231, 255, 0.9);
+    border-radius: 20px;
+    padding: 34px;
+    box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.15), 0 0 0 1px rgba(99, 102, 241, 0.08);
+}
+.login-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366F1, #EC4899);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Status Pill */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 9999px;
+    background-color: #ECFDF5;
+    color: #059669;
+    border: 1px solid #A7F3D0;
+}
+
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"] {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 13px !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #0F172A !important;
+    border-radius: 8px !important;
+    padding: 0 12px !important;
+    width: 100% !important;
+    transition: all 0.15s ease !important;
+}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"]:hover {
+    border-color: #C7D2FE !important;
+    background: #EEF2FF !important;
+    color: #4F46E5 !important;
+}
+
+/* Code & Pre */
+code, pre {
+    font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+    font-size: 13px !important;
+}
+
+.followup-chip button {
+    border-radius: 9999px !important;
+    font-size: 13px !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    color: #0F172A !important;
+    height: 36px !important;
+    transition: all 0.15s ease !important;
+}
+.followup-chip button:hover {
+    border-color: #8B5CF6 !important;
+    background: #F5F3FF !important;
+    color: #7C3AED !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -477,43 +790,59 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
             st.session_state[key] = default
 
     if not st.session_state.authenticated:
-        col_l, col_center, col_r = st.columns([1, 1.3, 1])
+        col_l, col_center, col_r = st.columns([1, 1.4, 1])
         with col_center:
-            st.markdown('<div style="margin-top: 8vh;"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top: 6vh;"></div>', unsafe_allow_html=True)
             st.markdown("""
-            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                <div style="font-size: 24px; font-weight: 600; color: #0F172A; margin-bottom: 4px;">Digital Store Admin Portal</div>
-                <div style="font-size: 15px; color: #475569; margin-bottom: 20px;">Sign in to continue</div>
+            <div class="login-card">
+                <div class="login-icon-badge">✨</div>
+                <div style="font-size: 26px; font-weight: 800; color: #0F172A; margin-bottom: 2px;">Clari <span class="gradient-text">Analyzer</span></div>
+                <div style="font-size: 14px; color: #64748B; margin-bottom: 20px;">AI-Powered Business Intelligence & Text-to-SQL Cockpit</div>
             """, unsafe_allow_html=True)
             with st.form("admin_login_form"):
                 admin_id = st.text_input("Admin ID", value="admin", placeholder="Enter Admin ID")
                 admin_pwd = st.text_input("Password", value="admin123", type="password", placeholder="Enter Password")
-                login_btn = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+                login_btn = st.form_submit_button("Sign In to Cockpit", type="primary", use_container_width=True)
                 if login_btn:
                     if admin_id == ADMIN_USER and admin_pwd == ADMIN_PASS:
                         st.session_state.authenticated = True
                         st.rerun()
                     else:
                         st.error("Invalid credentials. Please verify your Admin ID and Password.")
-            with st.expander("Demo credentials", expanded=False):
+            
+            st.markdown("""
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; margin-bottom: 8px;">
+                <span class="tech-pill pill-violet">🤖 LLaMA 3.3 70B</span>
+                <span class="tech-pill pill-pink">🎙️ Groq Whisper</span>
+                <span class="tech-pill pill-cyan">🛡️ SQLGlot</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            with st.expander("🔑 Demo credentials", expanded=False):
                 st.caption("Admin ID: `admin` | Password: `admin123`")
             st.markdown("</div>", unsafe_allow_html=True)
 
     else:
         with st.sidebar:
-            st.markdown('<div style="font-size: 16px; font-weight: 600; color: #0F172A;">Digital Store Cockpit</div>', unsafe_allow_html=True)
-            st.markdown('<span class="status-pill">PostgreSQL: Connected (113,390 rows)</span>', unsafe_allow_html=True)
-            st.markdown(f'<div style="font-size: 13px; color: #475569; margin-top: 4px;">Authenticated Operator: <b style="color: #0F172A;">{ADMIN_USER}</b></div>', unsafe_allow_html=True)
+            st.markdown("""
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <div style="width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, #6366F1, #EC4899); display: flex; align-items: center; justify-content: center; font-size: 17px; color: white; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);">⚡</div>
+                <div style="font-size: 18px; font-weight: 800; color: #0F172A;">Clari <span class="gradient-text">Analyzer</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown('<span class="status-pill">🟢 PostgreSQL: Connected (113,390 rows)</span>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size: 13px; color: #475569; margin-top: 6px;">👤 Operator: <b style="color: #4F46E5;">{ADMIN_USER}</b></div>', unsafe_allow_html=True)
             
             st.markdown('<hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />', unsafe_allow_html=True)
 
             with st.expander("System info", expanded=False):
                 st.markdown("""
                 <div style="font-size: 13px; line-height: 1.8;">
-                    <span style="color: #475569;">Engine:</span> <code style="color: #0F172A;">llama-3.3-70b-versatile</code><br>
+                    <span style="color: #475569;">Engine:</span> <code style="color: #6366F1; font-weight: 600;">llama-3.3-70b-versatile</code><br>
+                    <span style="color: #475569;">Speech:</span> <code style="color: #EC4899; font-weight: 600;">whisper-large-v3</code><br>
                     <span style="color: #475569;">Database:</span> <code style="color: #0F172A;">digital_store</code><br>
-                    <span style="color: #475569;">Driver:</span> <code style="color: #0F172A;">psycopg2 + SQLGlot</code><br>
-                    <span style="color: #475569;">Security:</span> <code style="color: #0F172A;">Read-Only (SELECT)</code>
+                    <span style="color: #475569;">Driver:</span> <code style="color: #0F172A;">PostgreSQL DB-API + SQLGlot</code><br>
+                    <span style="color: #475569;">Security:</span> <code style="color: #059669; font-weight: 600;">Read-Only (SELECT)</code>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -527,7 +856,7 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
                     "order_purchase_timestamp", "year_of_purchase"
                 ]
                 st.markdown(
-                    "<div style='font-size: 13px; font-family: \"JetBrains Mono\", ui-monospace, monospace; white-space: nowrap; line-height: 1.6; color: #0F172A;'>"
+                    "<div style='font-size: 13px; font-family: \"JetBrains Mono\", ui-monospace, monospace; white-space: nowrap; line-height: 1.6; color: #4F46E5;'>"
                     + "<br>".join(cols)
                     + "</div>",
                     unsafe_allow_html=True
@@ -536,9 +865,9 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
             st.markdown('<hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />', unsafe_allow_html=True)
 
             if st.session_state.query_history:
-                st.markdown('<div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 8px;">Recent Session Queries</div>', unsafe_allow_html=True)
+                st.markdown('<div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Recent Session Queries</div>', unsafe_allow_html=True)
                 for idx, h in enumerate(reversed(st.session_state.query_history[-4:])):
-                    if st.button(h, key=f"hist_{idx}", help=h, use_container_width=True):
+                    if st.button(f"🔍 {h}", key=f"hist_{idx}", help=h, use_container_width=True):
                         st.session_state.current_input = h
                         st.session_state.clarify_data = None
                         st.session_state.executed_data = None
@@ -552,25 +881,39 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
                 st.session_state.executed_data = None
                 st.rerun()
 
-        st.markdown('<h1>Digital Store Data Analysis Platform</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="header-sub">Ask a question in plain English. If it can be read more than one way, you will be asked to clarify before any SQL runs.</p>', unsafe_allow_html=True)
+        # --- Hero Banner ---
+        st.markdown("""
+        <div class="hero-banner">
+            <div class="hero-badge">⚡ Conversational SQL Intelligence</div>
+            <h1 class="hero-title">Clari <span class="gradient-text">Analyzer</span></h1>
+            <p class="hero-sub">Type or dictate natural language queries to instantly run verified SQL against your store database with real-time clarification and visual analytics.</p>
+            <div class="tech-pills">
+                <span class="tech-pill pill-violet">🤖 LLaMA 3.3 70B</span>
+                <span class="tech-pill pill-pink">🎙️ Groq Whisper Voice</span>
+                <span class="tech-pill pill-cyan">🛡️ SQLGlot AST Safety</span>
+                <span class="tech-pill pill-amber">📊 Auto Chart Switcher</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown('<div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 8px;">Preset Quick-Prompts</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 8px;">🚀 Quick-Prompt Shortcuts</div>', unsafe_allow_html=True)
         presets = [
-            "Top 5 cities by order count",
-            "Show me the most selling product",
-            "Revenue breakdown by payment type",
-            "Show me the top 5 customers"
+            ("🏙️ Top 5 Cities by Orders", "Top 5 cities by order count"),
+            ("🏆 Most Selling Product", "Show me the most selling product"),
+            ("💳 Revenue by Payment", "Revenue breakdown by payment type"),
+            ("👥 Top 5 High-Value Customers", "Show me the top 5 customers")
         ]
         p_cols = st.columns(len(presets))
-        for i, p in enumerate(presets):
+        for i, (p_label, p_query) in enumerate(presets):
             with p_cols[i]:
-                if st.button(p, key=f"quick_{i}", use_container_width=True):
-                    st.session_state.current_input = p
+                st.markdown('<div class="preset-btn">', unsafe_allow_html=True)
+                if st.button(p_label, key=f"quick_{i}", use_container_width=True):
+                    st.session_state.current_input = p_query
                     st.session_state.clarify_data = None
                     st.session_state.executed_data = None
                     st.session_state.trigger_run = True
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
         query_col, mic_col, btn_col = st.columns([5, 0.6, 1], vertical_alignment="bottom")
@@ -748,7 +1091,7 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
                     """)
 
             with tab_summary:
-                st.markdown('<div style="font-size: 15px; font-weight: 600; color: #0F172A; margin-bottom: 12px;">Key Performance Indicators</div>', unsafe_allow_html=True)
+                st.markdown('<div style="font-size: 16px; font-weight: 700; color: #0F172A; margin-bottom: 14px;">📈 Key Performance Indicators</div>', unsafe_allow_html=True)
                 num_cols = df.select_dtypes(include=["number"]).columns.tolist()
                 if num_cols:
                     metric_target = num_cols[0]
@@ -761,7 +1104,12 @@ code, pre { font-family: 'JetBrains Mono', ui-monospace, monospace !important; f
                     if len(df) > 0 and len(df.columns) >= 2:
                         top_label = df.iloc[0][df.columns[0]]
                         top_val = df.iloc[0][metric_target]
-                        st.info(f"Top Performer: {top_label} with {top_val:,.2f} {metric_target}")
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #EEF2FF 0%, #FAF5FF 50%, #FDF2F8 100%); border: 1.5px solid #C7D2FE; border-radius: 12px; padding: 16px 20px; margin-top: 16px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);">
+                            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #4F46E5; margin-bottom: 4px;">🏆 Top Performer Highlight</div>
+                            <div style="font-size: 16px; font-weight: 700; color: #0F172A;">{top_label} <span style="font-weight: 500; color: #475569;">generated</span> <span class="gradient-text" style="font-size: 18px; font-weight: 800;">{top_val:,.2f}</span> {metric_target}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
                     st.metric("Total Records Identified", len(df))
         elif not st.session_state.clarify_data and not st.session_state.error_message:

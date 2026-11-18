@@ -1,5 +1,9 @@
 import os
-import psycopg2
+try:
+    import psycopg2
+except Exception:
+    psycopg2 = None
+import pg8000.dbapi
 from dotenv import load_dotenv
 from groq import Groq
 
@@ -32,15 +36,28 @@ def ask_sql(question: str):
     sql = res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
     print(f"Generated SQL: {sql}\nResults:")
 
-    # 5. Connect to PostgreSQL via psycopg2, execute query, and print structured rows
-    conn = psycopg2.connect(
-        dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST", "localhost"), port=os.getenv("DB_PORT", "5432")
-    )
-    with conn.cursor() as cur:
+    # 5. Connect to PostgreSQL and print structured rows
+    db_name = os.getenv("DB_NAME", "digital_store")
+    db_user = os.getenv("DB_USER")
+    db_pwd = os.getenv("DB_PASSWORD")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = int(os.getenv("DB_PORT", "5432"))
+
+    if psycopg2 is not None:
+        try:
+            conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+        except Exception:
+            conn = pg8000.dbapi.connect(database=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+    else:
+        conn = pg8000.dbapi.connect(database=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+
+    cur = conn.cursor()
+    try:
         cur.execute(sql)
         for row in cur.fetchall():
             print(row)
+    finally:
+        cur.close()
     conn.close()
 
 if __name__ == "__main__":

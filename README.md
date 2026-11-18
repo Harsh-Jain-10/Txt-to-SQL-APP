@@ -1,4 +1,4 @@
-# ⚡ Digital Store Intelligence Platform (Text-to-SQL Analytics Cockpit)
+# ⚡ Clari Analyzer (Text-to-SQL Analytics Cockpit)
 
 A production-ready, executive-grade business intelligence portal built with Python and Streamlit. The application translates natural language business queries into valid PostgreSQL queries using Groq LLM inference, enforces strict SQLGlot security guardrails, disambiguates vague user requests via Pydantic schemas, and delivers multi-tab structured analytics and interactive charts.
 

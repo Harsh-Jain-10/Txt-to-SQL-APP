@@ -1,4 +1,8 @@
-import os, json, psycopg2, sqlglot, pandas as pd
+import os, json, sqlglot, pandas as pd
+try:
+    import psycopg2
+except Exception:
+    psycopg2 = None
 from sqlglot import exp
 from dotenv import load_dotenv
 from groq import Groq

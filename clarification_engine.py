@@ -1,6 +1,10 @@
 import os
 import json
-import psycopg2
+try:
+    import psycopg2
+except Exception:
+    psycopg2 = None
+import pg8000.dbapi
 import sqlglot
 from sqlglot import exp
 from dotenv import load_dotenv
@@ -127,13 +131,20 @@ def execute_sql(sql: str):
         print(f"Validation failed: {rej}")
         return
     print(f"\n[Executing SQL]\n{safe_sql}\n")
-    conn = psycopg2.connect(
-        dbname=os.getenv("DB_NAME", "digital_store"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432")
-    )
+    db_name = os.getenv("DB_NAME", "digital_store")
+    db_user = os.getenv("DB_USER")
+    db_pwd = os.getenv("DB_PASSWORD")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = int(os.getenv("DB_PORT", "5432"))
+
+    if psycopg2 is not None:
+        try:
+            conn = psycopg2.connect(dbname=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+        except Exception:
+            conn = pg8000.dbapi.connect(database=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+    else:
+        conn = pg8000.dbapi.connect(database=db_name, user=db_user, password=db_pwd, host=db_host, port=db_port)
+
     cursor = conn.cursor()
     cursor.execute("SET statement_timeout = 10000;")
     cursor.execute(safe_sql)
