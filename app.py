@@ -472,127 +472,143 @@ html, body, [data-testid="stApp"], button, input, textarea {
 }
 
 [data-testid="stMainBlockContainer"], .block-container {
-    max-width: 1260px !important;
-    padding-top: 20px !important;
+    max-width: 1200px !important;
+    padding-top: 48px !important;
     padding-bottom: 48px !important;
     margin: 0 auto !important;
 }
 
+header, header[data-testid="stHeader"] {
+    display: none !important;
+    height: 0px !important;
+    visibility: hidden !important;
+}
+
 [data-testid="stHeaderActionElements"] { display: none !important; }
 
-/* Landing Header Bar */
-.landing-header {
+/* Visual Dashboard Art Frame */
+.art-frame {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 20px 45px -15px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.04);
+}
+.art-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 22px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(224, 231, 255, 0.85);
-    border-radius: 14px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.06);
+    padding-bottom: 14px;
+    border-bottom: 1px solid #F1F5F9;
+    margin-bottom: 16px;
 }
-
-/* Landing Stats Grid */
-.landing-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 22px;
-}
-.landing-stat-card {
-    background: #FFFFFF;
-    border: 1px solid #E0E7FF;
-    border-radius: 12px;
-    padding: 12px 14px;
-    text-align: left;
-    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.04);
-}
-.landing-stat-card .stat-number {
-    font-size: 22px;
-    font-weight: 800;
-    color: #4F46E5;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-}
-.landing-stat-card .stat-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #64748B;
-    margin-top: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-/* Feature Cards Grid */
-.feature-card-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-.feature-card {
+.art-dots {
     display: flex;
-    gap: 12px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    border-radius: 14px;
-    padding: 14px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    gap: 6px;
 }
-.feature-card:hover {
-    border-color: #C7D2FE;
-    background: #FFFFFF;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(99, 102, 241, 0.08);
+.art-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
 }
-.feature-icon {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    border-radius: 10px;
-    border: 1px solid;
+.art-dot.red { background: #FDA4AF; }
+.art-dot.yellow { background: #FDE047; }
+.art-dot.green { background: #86EFAC; }
+
+.art-search-mock {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 19px;
+    gap: 8px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #475569;
 }
-.feature-title {
-    font-size: 13.5px;
+.art-search-badge {
+    background: #ECFDF5;
+    color: #059669;
+    font-size: 10px;
     font-weight: 700;
-    color: #0F172A;
-    margin-bottom: 2px;
-}
-.feature-desc {
-    font-size: 12px;
-    color: #64748B;
-    line-height: 1.45;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #A7F3D0;
 }
 
-/* Elevated Login Card */
-.login-card-elevated {
-    background: #FFFFFF;
-    border: 1.5px solid rgba(224, 231, 255, 0.95);
-    border-radius: 20px;
-    padding: 28px;
-    box-shadow: 0 20px 45px -12px rgba(99, 102, 241, 0.18), 0 0 0 1px rgba(99, 102, 241, 0.05);
-    position: relative;
+.art-chart-card {
+    background: #FAFAFA;
+    border: 1px solid #F1F5F9;
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+}
+.art-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.art-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1E293B;
+}
+.art-card-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: #4F46E5;
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
+.art-svg-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.art-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.art-mini-card {
+    background: #FAFAFA;
+    border: 1px solid #F1F5F9;
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+.art-mini-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+}
+.art-mini-bar-track {
+    width: 100%;
+    height: 6px;
+    background: #E2E8F0;
+    border-radius: 9999px;
+    margin-top: 8px;
     overflow: hidden;
 }
-.login-card-elevated::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #06B6D4);
+.art-mini-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366F1, #EC4899);
+    border-radius: 9999px;
 }
 
-.demo-credential-box {
-    background: #F8FAFC;
-    border: 1.5px dashed #CBD5E1;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-top: 14px;
+/* Sleek Login Card */
+.sleek-login-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 20px;
+    padding: 34px 30px;
+    box-shadow: 0 20px 45px -15px rgba(99, 102, 241, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.04);
 }
 
 /* Hero Banner */
@@ -912,80 +928,80 @@ code, pre {
             st.session_state[key] = default
 
     if not st.session_state.authenticated:
-        # Full-width top navigation bar
-        render_html("""
-        <div class="landing-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #6366F1, #EC4899); display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">⚡</div>
-                <div>
-                    <span style="font-size: 20px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em;">Clari <span class="gradient-text">Analyzer</span></span>
-                    <span style="font-size: 11px; font-weight: 700; background: #EEF2FF; color: #4F46E5; border: 1px solid #C7D2FE; padding: 2px 8px; border-radius: 9999px; margin-left: 8px;">ENTERPRISE BI</span>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="status-pill">🟢 PostgreSQL: Connected (113,390 rows)</span>
-                <span class="tech-pill pill-violet">🛡️ AST Read-Only Sandbox</span>
-            </div>
-        </div>
-        """)
+        col_art, col_login = st.columns([1.2, 0.9], gap="large")
 
-        col_hero, col_login = st.columns([1.35, 1.0], gap="large")
-
-        with col_hero:
+        with col_art:
             render_html("""
-            <div class="hero-showcase">
-                <div class="hero-badge" style="margin-bottom: 12px;">✨ Next-Generation AI Analytics Cockpit</div>
-                <h1 style="font-size: 36px !important; font-weight: 800 !important; line-height: 1.15 !important; letter-spacing: -0.03em; color: #0F172A; margin: 0 0 14px 0 !important;">
-                    Turn Plain English & Voice Into <span class="gradient-text">Verified SQL Intelligence</span>
-                </h1>
-                <p style="font-size: 15.5px !important; color: #475569 !important; line-height: 1.55 !important; margin-bottom: 22px !important;">
-                    Ask natural business questions by typing or speaking. Clari Analyzer validates schema rules, disambiguates vague metrics with human-in-the-loop clarification, and visualizes <b>113,000+ transactional records</b> with strict AST guardrails.
-                </p>
-                <div class="landing-stats-grid">
-                    <div class="landing-stat-card">
-                        <div class="stat-number">113K+</div>
-                        <div class="stat-label">Indexed Records</div>
+            <div class="art-frame">
+                <div class="art-top-bar">
+                    <div class="art-dots">
+                        <span class="art-dot red"></span>
+                        <span class="art-dot yellow"></span>
+                        <span class="art-dot green"></span>
                     </div>
-                    <div class="landing-stat-card">
-                        <div class="stat-number">&lt; 40ms</div>
-                        <div class="stat-label">AST Verification</div>
-                    </div>
-                    <div class="landing-stat-card">
-                        <div class="stat-number">100%</div>
-                        <div class="stat-label">Read-Only Safety</div>
-                    </div>
-                    <div class="landing-stat-card">
-                        <div class="stat-number">Zero</div>
-                        <div class="stat-label">Hallucinations</div>
+                    <div class="art-search-mock">
+                        <span>⚡ SELECT * FROM digital_store_sales</span>
+                        <span class="art-search-badge">AST VERIFIED</span>
                     </div>
                 </div>
-                <div class="feature-card-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background: #FDF2F8; border-color: #FBCFE8; color: #DB2777;">🎙️</div>
-                        <div class="feature-content">
-                            <div class="feature-title">Groq Whisper Voice Dictation</div>
-                            <div class="feature-desc">Speak questions naturally. Integrated lightning-fast whisper-large-v3 cloud speech-to-text.</div>
+
+                <div class="art-chart-card">
+                    <div class="art-card-header">
+                        <div class="art-card-title">Telemetry &amp; Query Velocity</div>
+                        <div class="art-card-pill">● Live Pipeline</div>
+                    </div>
+                    <svg class="art-svg-chart" viewBox="0 0 460 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#6366F1" stop-opacity="0.38"/>
+                                <stop offset="100%" stop-color="#EC4899" stop-opacity="0.0"/>
+                            </linearGradient>
+                            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#6366F1"/>
+                                <stop offset="50%" stop-color="#8B5CF6"/>
+                                <stop offset="100%" stop-color="#EC4899"/>
+                            </linearGradient>
+                        </defs>
+                        <line x1="0" y1="30" x2="460" y2="30" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                        <line x1="0" y1="75" x2="460" y2="75" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                        <line x1="0" y1="120" x2="460" y2="120" stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                        <path d="M0,115 Q60,105 100,55 T200,75 T300,28 T400,48 T460,18 L460,150 L0,150 Z" fill="url(#chartGrad)"/>
+                        <path d="M0,115 Q60,105 100,55 T200,75 T300,28 T400,48 T460,18" stroke="url(#lineGrad)" stroke-width="3" stroke-linecap="round"/>
+                        <circle cx="100" cy="55" r="5" fill="#6366F1" stroke="#FFFFFF" stroke-width="2"/>
+                        <circle cx="200" cy="75" r="5" fill="#8B5CF6" stroke="#FFFFFF" stroke-width="2"/>
+                        <circle cx="300" cy="28" r="5" fill="#EC4899" stroke="#FFFFFF" stroke-width="2"/>
+                        <circle cx="400" cy="48" r="5" fill="#06B6D4" stroke="#FFFFFF" stroke-width="2"/>
+                        <circle cx="460" cy="18" r="5" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+                    </svg>
+                </div>
+
+                <div class="art-bottom-grid">
+                    <div class="art-mini-card">
+                        <div class="art-mini-title">Security Guardrail</div>
+                        <div style="display: flex; align-items: center; gap: 14px; margin-top: 8px;">
+                            <svg width="60" height="60" viewBox="0 0 36 36">
+                                <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#EEF2FF" stroke-width="3.6"/>
+                                <path stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#lineGrad)" stroke-width="3.6" stroke-linecap="round"/>
+                                <text x="18" y="21" font-size="8.5" font-weight="700" fill="#4F46E5" text-anchor="middle">100%</text>
+                            </svg>
+                            <div>
+                                <div style="font-size: 13.5px; font-weight: 700; color: #0F172A;">Strict SELECT</div>
+                                <div style="font-size: 11px; color: #64748B;">Read-Only AST</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background: #EEF2FF; border-color: #C7D2FE; color: #4F46E5;">🧠</div>
-                        <div class="feature-content">
-                            <div class="feature-title">Smart Metric Disambiguation</div>
-                            <div class="feature-desc">Never guesses ambiguous queries like "revenue" or "most selling". Asks before running.</div>
-                        </div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background: #ECFEFF; border-color: #A5F3FC; color: #0891B2;">🛡️</div>
-                        <div class="feature-content">
-                            <div class="feature-title">SQLGlot AST Security Layer</div>
-                            <div class="feature-desc">Blocks multi-statement injection, DDL/DML mutations, and restricts to digital_store_sales.</div>
-                        </div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background: #FFFBEB; border-color: #FDE68A; color: #D97706;">📊</div>
-                        <div class="feature-content">
-                            <div class="feature-title">Adaptive Charting & Insights</div>
-                            <div class="feature-desc">Auto-selects optimal bar, line, donut, and distribution charts with one-sentence executive insights.</div>
+
+                    <div class="art-mini-card">
+                        <div class="art-mini-title">Database Records</div>
+                        <div style="margin-top: 8px;">
+                            <div style="font-size: 20px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em;">113,390</div>
+                            <div class="art-mini-bar-track">
+                                <div class="art-mini-bar-fill" style="width: 86%;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748B; margin-top: 5px;">
+                                <span>Indexed Rows</span>
+                                <span style="color: #059669; font-weight: 600;">● PostgreSQL</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -994,22 +1010,17 @@ code, pre {
 
         with col_login:
             render_html("""
-            <div class="login-card-elevated">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="login-icon-badge">✨</div>
-                        <div>
-                            <div style="font-size: 20px; font-weight: 800; color: #0F172A;">Operator Sign In</div>
-                            <div style="font-size: 13px; color: #64748B;">Enter your credentials to access cockpit</div>
-                        </div>
-                    </div>
-                    <span style="font-size: 11px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 3px 8px; border-radius: 9999px;">SECURE 256-BIT</span>
+            <div class="sleek-login-card">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #6366F1, #EC4899); display: flex; align-items: center; justify-content: center; font-size: 19px; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">⚡</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em;">Clari <span class="gradient-text">Analyzer</span></div>
                 </div>
+                <div style="font-size: 13.5px; color: #64748B; margin-bottom: 22px;">Enterprise Analytics Cockpit</div>
             """)
             with st.form("admin_login_form"):
                 admin_id = st.text_input("Admin ID", value="admin", placeholder="Enter Admin ID")
                 admin_pwd = st.text_input("Password", value="admin123", type="password", placeholder="Enter Password")
-                login_btn = st.form_submit_button("Sign In to Analytics Cockpit ➔", type="primary", use_container_width=True)
+                login_btn = st.form_submit_button("Sign In →", type="primary", use_container_width=True)
                 if login_btn:
                     if admin_id == ADMIN_USER and admin_pwd == ADMIN_PASS:
                         st.session_state.authenticated = True
@@ -1018,25 +1029,9 @@ code, pre {
                         st.error("Invalid credentials. Please verify your Admin ID and Password.")
             
             render_html("""
-            <div class="demo-credential-box">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="font-size: 13px; font-weight: 700; color: #1E293B;">🔑 Quick Demo Credentials</div>
-                    <span style="font-size: 11px; font-weight: 600; color: #4F46E5; background: #EEF2FF; padding: 2px 6px; border-radius: 4px;">Pre-Filled</span>
-                </div>
-                <div style="display: flex; gap: 16px; margin-top: 6px; font-size: 12.5px; color: #475569;">
-                    <div>User: <code style="color: #4F46E5; font-weight: 600;">admin</code></div>
-                    <div>Password: <code style="color: #4F46E5; font-weight: 600;">admin123</code></div>
-                </div>
-            </div>
-
-            <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid #E2E8F0;">
-                <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 8px;">Stack & Integrations</div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <span class="tech-pill pill-violet">🤖 LLaMA 3.3 70B</span>
-                    <span class="tech-pill pill-pink">🎙️ Groq Whisper v3</span>
-                    <span class="tech-pill pill-cyan">🛡️ SQLGlot AST</span>
-                    <span class="tech-pill pill-amber">🐘 PostgreSQL 16</span>
-                </div>
+            <div style="margin-top: 18px; padding: 10px 14px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 10px; font-size: 12.5px; color: #64748B; display: flex; justify-content: space-between; align-items: center;">
+                <span>Demo Access:</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #4F46E5;">admin / admin123</span>
             </div>
             </div>
             """)
