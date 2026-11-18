@@ -1,4 +1,4 @@
-import os, json, time, io
+import os, json, time, io, textwrap
 from decimal import Decimal
 import streamlit as st
 import pandas as pd
@@ -23,6 +23,10 @@ load_dotenv()
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "admin123")
 client = Groq(api_key=os.getenv("LLM_API_KEY"))
+
+def render_html(raw_html: str):
+    """Safely render HTML without Markdown indentation code-block artifacts."""
+    st.markdown(textwrap.dedent(raw_html).strip(), unsafe_allow_html=True)
 
 # =============================================================================
 # 1. Pydantic Models & Ground Truth Schema Definition
@@ -909,7 +913,7 @@ code, pre {
 
     if not st.session_state.authenticated:
         # Full-width top navigation bar
-        st.markdown("""
+        render_html("""
         <div class="landing-header">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #6366F1, #EC4899); display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">⚡</div>
@@ -923,12 +927,12 @@ code, pre {
                 <span class="tech-pill pill-violet">🛡️ AST Read-Only Sandbox</span>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         col_hero, col_login = st.columns([1.35, 1.0], gap="large")
 
         with col_hero:
-            st.markdown("""
+            render_html("""
             <div class="hero-showcase">
                 <div class="hero-badge" style="margin-bottom: 12px;">✨ Next-Generation AI Analytics Cockpit</div>
                 <h1 style="font-size: 36px !important; font-weight: 800 !important; line-height: 1.15 !important; letter-spacing: -0.03em; color: #0F172A; margin: 0 0 14px 0 !important;">
@@ -937,15 +941,13 @@ code, pre {
                 <p style="font-size: 15.5px !important; color: #475569 !important; line-height: 1.55 !important; margin-bottom: 22px !important;">
                     Ask natural business questions by typing or speaking. Clari Analyzer validates schema rules, disambiguates vague metrics with human-in-the-loop clarification, and visualizes <b>113,000+ transactional records</b> with strict AST guardrails.
                 </p>
-
-                <!-- Stats KPI Row -->
                 <div class="landing-stats-grid">
                     <div class="landing-stat-card">
                         <div class="stat-number">113K+</div>
                         <div class="stat-label">Indexed Records</div>
                     </div>
                     <div class="landing-stat-card">
-                        <div class="stat-number">< 40ms</div>
+                        <div class="stat-number">&lt; 40ms</div>
                         <div class="stat-label">AST Verification</div>
                     </div>
                     <div class="landing-stat-card">
@@ -957,8 +959,6 @@ code, pre {
                         <div class="stat-label">Hallucinations</div>
                     </div>
                 </div>
-
-                <!-- 4 Interactive Feature Highlights -->
                 <div class="feature-card-grid">
                     <div class="feature-card">
                         <div class="feature-icon" style="background: #FDF2F8; border-color: #FBCFE8; color: #DB2777;">🎙️</div>
@@ -990,10 +990,10 @@ code, pre {
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
         with col_login:
-            st.markdown("""
+            render_html("""
             <div class="login-card-elevated">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -1005,7 +1005,7 @@ code, pre {
                     </div>
                     <span style="font-size: 11px; font-weight: 700; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 3px 8px; border-radius: 9999px;">SECURE 256-BIT</span>
                 </div>
-            """, unsafe_allow_html=True)
+            """)
             with st.form("admin_login_form"):
                 admin_id = st.text_input("Admin ID", value="admin", placeholder="Enter Admin ID")
                 admin_pwd = st.text_input("Password", value="admin123", type="password", placeholder="Enter Password")
@@ -1017,7 +1017,7 @@ code, pre {
                     else:
                         st.error("Invalid credentials. Please verify your Admin ID and Password.")
             
-            st.markdown("""
+            render_html("""
             <div class="demo-credential-box">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div style="font-size: 13px; font-weight: 700; color: #1E293B;">🔑 Quick Demo Credentials</div>
@@ -1039,7 +1039,7 @@ code, pre {
                 </div>
             </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
 
     else:
         with st.sidebar:
