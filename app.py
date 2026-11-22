@@ -519,23 +519,42 @@ header, header[data-testid="stHeader"] {
 
 [data-testid="stHeaderActionElements"] { display: none !important; }
 
-/* Centered Minimalist Login Card */
-.centered-login-card {
-    background: #FFFFFF;
-    border: 1.5px solid rgba(224, 231, 255, 0.95);
-    border-radius: 24px;
-    padding: 38px 34px 28px 34px;
-    box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.16), 0 0 0 1px rgba(99, 102, 241, 0.05);
-    position: relative;
+/* Product landing and sign-in */
+[data-testid="stMainBlockContainer"]:has(.login-story), .block-container:has(.login-story) {
+    max-width: 1240px !important;
+    padding-top: 7vh !important;
+}
+.login-story {
+    min-height: 610px;
+    border-radius: 28px;
+    padding: 48px;
+    color: #F8FAFC;
+    background: radial-gradient(circle at 85% 15%, rgba(124,58,237,.45), transparent 34%), linear-gradient(145deg,#101426 0%,#1B2340 58%,#33244E 100%);
+    box-shadow: 0 28px 70px rgba(30,27,75,.22);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     overflow: hidden;
-    margin-top: 5vh;
 }
-.centered-login-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 5px;
-    background: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #06B6D4);
-}
+.login-brand { display:flex; align-items:center; gap:12px; font-size:18px; font-weight:800; letter-spacing:-.02em; }
+.login-brand-icon { width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#818CF8,#E879F9);font-size:19px; }
+.login-eyebrow { margin-top:58px; color:#C4B5FD; text-transform:uppercase; letter-spacing:.14em; font-size:11px; font-weight:800; }
+.login-story h1 { margin:12px 0 14px; color:white; font-size:clamp(34px,4vw,52px); line-height:1.04; letter-spacing:-.045em; font-weight:800; }
+.login-story-copy { max-width:480px; color:#CBD5E1; font-size:16px; line-height:1.7; }
+.login-feature-list { display:flex; flex-wrap:wrap; gap:10px; margin:28px 0; }
+.login-feature { padding:9px 12px; color:#E0E7FF; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:999px; font-size:12px; }
+.login-preview { margin-top:18px; padding:18px; border:1px solid rgba(255,255,255,.16); border-radius:18px; background:rgba(10,15,32,.46); backdrop-filter:blur(10px); }
+.login-preview-label { color:#A5B4FC; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:800; }
+.login-preview-question { margin:8px 0 16px; color:#F8FAFC; font-size:14px; }
+.login-preview-answer { display:flex; align-items:center; justify-content:space-between; color:#CBD5E1; font-size:12px; }
+.login-preview-answer strong { color:#A5F3FC; font-size:20px; }
+.login-bars { height:42px; display:flex; align-items:end; gap:7px; margin-top:14px; }
+.login-bars i { flex:1; border-radius:5px 5px 0 0; background:linear-gradient(180deg,#A78BFA,#6366F1); }
+.st-key-login_panel { background:#fff; padding:32px !important; border:1px solid #E7E9F4; border-radius:24px; box-shadow:0 24px 70px rgba(30,41,59,.1); }
+.login-panel-kicker { color:#6366F1; text-transform:uppercase; letter-spacing:.12em; font-size:11px; font-weight:800; margin-bottom:8px; }
+.login-panel-title { margin:0 0 6px; color:#111827; font-size:27px; letter-spacing:-.04em; font-weight:800; }
+.login-panel-copy { margin-bottom:22px; color:#64748B; font-size:13px; line-height:1.6; }
+.login-trust { color:#64748B; font-size:11px; margin-top:14px; }
 
 /* Hero Banner */
 .hero-banner {
@@ -859,6 +878,9 @@ code, pre {
     }
     .hero-title { font-size: 26px !important; }
     .hero-banner { padding: 20px; }
+    .login-story { min-height:unset; padding:28px; margin-bottom:20px; }
+    .login-eyebrow { margin-top:34px; }
+    .st-key-login_panel { padding:24px !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -878,42 +900,43 @@ code, pre {
             st.session_state[key] = default
 
     if not st.session_state.authenticated:
-        col_l, col_center, col_r = st.columns([1, 1.25, 1])
-
-        with col_center:
+        story_col, auth_col = st.columns([1.15, 0.85], gap="large", vertical_alignment="center")
+        with story_col:
             render_html("""
-            <div class="centered-login-card">
-                <div style="display: flex; justify-content: center; margin-bottom: 14px;">
-                    <div style="width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #6366F1, #EC4899); display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);">⚡</div>
-                </div>
-                <div style="text-align: center; font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; margin-bottom: 4px;">
-                    Clari <span class="gradient-text">Analyzer</span>
-                </div>
-                <div style="text-align: center; font-size: 14px; color: #64748B; margin-bottom: 24px;">
-                    Enterprise Business Intelligence Cockpit
-                </div>
+            <section class="login-story">
+              <div>
+                <div class="login-brand"><span class="login-brand-icon">✦</span> Clari Analyzer</div>
+                <div class="login-eyebrow">Conversational analytics for commerce</div>
+                <h1>Ask better questions<br>of your business data.</h1>
+                <div class="login-story-copy">Turn everyday questions into clear, traceable analysis. Clarify the metric, inspect the SQL, and explore the answer in one place.</div>
+                <div class="login-feature-list"><span class="login-feature">✦ Natural language to SQL</span><span class="login-feature">✓ Read-only query checks</span><span class="login-feature">↗ Charts and follow-ups</span></div>
+              </div>
+              <div class="login-preview">
+                <div class="login-preview-label">Example analysis</div>
+                <div class="login-preview-question">“Which states had the most orders?”</div>
+                <div class="login-preview-answer"><span>Top state · order count</span><strong>18,420</strong></div>
+                <div class="login-bars"><i style="height:92%"></i><i style="height:76%"></i><i style="height:61%"></i><i style="height:48%"></i><i style="height:34%"></i><i style="height:24%"></i></div>
+              </div>
+            </section>
             """)
-            with st.form("admin_login_form"):
-                admin_id = st.text_input("Admin ID", value="admin", placeholder="Enter Admin ID")
-                admin_pwd = st.text_input("Password", value="admin123", type="password", placeholder="Enter Password")
-                login_btn = st.form_submit_button("Sign In to Cockpit →", type="primary", use_container_width=True)
-                if login_btn:
-                    if admin_id == ADMIN_USER and admin_pwd == ADMIN_PASS:
-                        st.session_state.authenticated = True
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials. Please verify your Admin ID and Password.")
-
-            render_html("""
-            <div style="margin-top: 18px; padding: 12px 16px; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 12px; font-size: 12.5px; color: #64748B; display: flex; justify-content: space-between; align-items: center;">
-                <span>Demo Access:</span>
-                <span style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: #4F46E5;">admin / admin123</span>
-            </div>
-            <div style="margin-top: 22px; text-align: center; font-size: 12px; color: #94A3B8;">
-                🔒 256-Bit SSL Encrypted • Strict Read-Only AST Guardrails
-            </div>
-            </div>
-            """)
+        with auth_col:
+            with st.container(border=True, key="login_panel"):
+                render_html("""
+                <div class="login-panel-kicker">Your analytics workspace</div>
+                <h2 class="login-panel-title">Welcome back</h2>
+                <div class="login-panel-copy">Sign in to explore the store dataset, review recent questions, and continue your analysis.</div>
+                """)
+                with st.form("admin_login_form"):
+                    admin_id = st.text_input("Admin ID", value=ADMIN_USER, placeholder="Enter Admin ID")
+                    admin_pwd = st.text_input("Password", value=ADMIN_PASS, type="password", placeholder="Enter Password")
+                    login_btn = st.form_submit_button("Open analytics workspace →", type="primary", use_container_width=True)
+                    if login_btn:
+                        if admin_id == ADMIN_USER and admin_pwd == ADMIN_PASS:
+                            st.session_state.authenticated = True
+                            st.rerun()
+                        else:
+                            st.error("Invalid credentials. Please check your Admin ID and password.")
+                render_html("<div class='login-trust'>🔒 Read-only analytics · SQL safety checks · Dataset-grounded answers</div>")
 
     else:
         with st.sidebar:
