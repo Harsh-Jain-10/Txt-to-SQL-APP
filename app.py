@@ -806,6 +806,28 @@ code, pre {
     background: #F5F3FF !important;
     color: #7C3AED !important;
 }
+
+[data-testid="stTabs"] [role="tablist"] {
+    gap: 8px;
+    border-bottom: 1px solid #E2E8F0;
+}
+[data-testid="stTabs"] button[role="tab"] {
+    border-radius: 10px 10px 0 0;
+    padding: 10px 14px;
+    font-weight: 600;
+}
+[data-testid="stDataFrame"] {
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+@media (max-width: 720px) {
+    [data-testid="stMainBlockContainer"], .block-container {
+        padding: 20px 16px !important;
+    }
+    .hero-title { font-size: 26px !important; }
+    .hero-banner { padding: 20px; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -934,8 +956,8 @@ code, pre {
         st.markdown("""
         <div class="hero-banner">
             <div class="hero-badge">⚡ Conversational SQL Intelligence</div>
-            <h1 class="hero-title">Clari <span class="gradient-text">Analyzer</span></h1>
-            <p class="hero-sub">Type or dictate natural language queries to instantly run verified SQL against your store database with real-time clarification and visual analytics.</p>
+            <h1 class="hero-title">Ask your store data a question.</h1>
+            <p class="hero-sub">Get a grounded answer with an explainable chart, result table, and read-only SQL audit.</p>
             <div class="tech-pills">
                 <span class="tech-pill pill-violet">🤖 LLaMA 3.3 70B</span>
                 <span class="tech-pill pill-pink">🎙️ Groq Whisper Voice</span>
@@ -1124,7 +1146,8 @@ code, pre {
                 st.write("**Returned columns:** " + ", ".join(str(column) for column in df.columns))
                 st.code(safe_sql, language="sql")
 
-            tab_chart, tab_table, tab_audit, tab_summary = st.tabs(["Chart", "Table", "SQL & Guardrail Audit", "Summary Metrics"])
+            st.markdown("#### Explore the answer")
+            tab_chart, tab_table, tab_audit, tab_summary = st.tabs(["Visual", "Data", "Query & Safety", "Metrics"])
 
             with tab_chart:
                 render_auto_chart(df, orig_q, lbl)
