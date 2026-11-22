@@ -1,6 +1,6 @@
 # ⚡ Clari Analyzer (Conversational Text-to-SQL Analytics Cockpit)
 
-A production-grade, executive business intelligence portal built with Python, Streamlit, and Groq LLMs. Clari Analyzer translates natural language business questions and voice dictation into verified PostgreSQL queries, resolves metric ambiguities through interactive human-in-the-loop clarification, enforces strict SQLGlot AST guardrails, and renders interactive multi-tab analytics with automated executive insights.
+A dataset-focused conversational analytics app built with Python, Streamlit, PostgreSQL, SQLGlot, and Groq. Clari Analyzer turns business questions into read-only SQL, asks users to clarify ambiguous metrics, and presents results with charts, query details, and exportable reports.
 
 ---
 
@@ -12,7 +12,7 @@ flowchart LR
     B["⌨️ Natural Language<br/>Text Input"] --> C
     C --> D["🧠 Intent & Clarification Engine<br/>(LLaMA 3.3 70B + Pydantic)"]
     D -->|"Ambiguous Metric"| E["Human-in-the-Loop<br/>Clarification UI"]
-    E --> F["Deterministic SQL Generation"]
+    E --> F["Schema-Grounded SQL Generation"]
     D -->|"Clear Query"| F
     F --> G["🛡️ SQLGlot AST Guardrails<br/>(Read-Only SELECT + Blacklist)"]
     G -->|"Approved"| H["🐘 PostgreSQL Database<br/>(psycopg2 / pg8000 fallback)"]
@@ -24,11 +24,10 @@ flowchart LR
 
 ## 🚀 Key Modules & Capabilities
 
-### 🏢 1. Enterprise Landing Page & Showcase
-- **Two-Column High-Impact Showcase**: Full-width landing experience highlighting live platform metrics and architecture.
-- **Live Platform Metrics**: Real-time KPI counter cards for **113K+ Indexed Records**, **< 40ms AST Verification**, **100% Read-Only Safety**, and **Zero SQL Hallucinations**.
-- **Capability Cards Grid**: Feature previews for Voice Dictation, Smart Metric Disambiguation, AST Security, and Adaptive Charting.
-- **Secure Operator Sign-In**: Authentication gate with pre-filled demo credentials (`admin` / `admin123`) and enterprise styling.
+### 🧭 1. Analytics Workspace
+- Query examples, text and voice input, session history, and responsive result views.
+- Live database health and row-count status in the sidebar.
+- Demo sign-in is configurable through environment variables.
 
 ### 🎙️ 2. Real-Time Voice-to-SQL Dictation
 - **Groq Whisper API (`whisper-large-v3`)**: Lightning-fast cloud audio transcription directly from the browser.
@@ -36,7 +35,7 @@ flowchart LR
 - **Automated Workflow Trigger**: Transcribed speech automatically populates the query bar and immediately initiates the intent analysis pipeline.
 
 ### 🧠 3. Human-in-the-Loop Clarification Engine
-- **Zero-Guesswork Metric Resolution**: Queries containing ambiguous business terms (e.g., *"revenue"*, *"sales"*, *"most selling"*, *"best"*) are classified as ambiguous.
+- **Metric Clarification**: Ambiguous business terms can prompt the user to choose an interpretation.
 - **Mathematical Option Cards**: Prompts the user to pick between concrete mathematical interpretations (e.g., `SUM(price)` item revenue vs. `SUM(payment_value)` distinct payments collected vs. `COUNT(DISTINCT order_id)` orders).
 - **Strict Schema Grounding**: Automatically detects and rejects unsupported column requests (e.g., phone numbers, credit card CVV, customer reviews) with informative schema guidance.
 
@@ -44,8 +43,9 @@ flowchart LR
 - **Read-Only AST Validation**: Parses SQL queries using SQLGlot (`dialect="postgres"`) to verify the statement root is strictly `exp.Select`.
 - **Mutation Blacklist**: Enforces immediate rejection for forbidden keywords (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `GRANT`, `REVOKE`, `EXECUTE`).
 - **Table Whitelisting**: Confines all queries exclusively to the `digital_store_sales` dataset.
-- **Injection & Injection Prevention**: Blocks multi-statement execution separated by semicolons.
+- **Multi-Statement Protection**: Blocks multiple statements separated by semicolons.
 - **Row Limits & Timeouts**: Enforces `LIMIT 1000` default caps and `SET statement_timeout = 10000;` on PostgreSQL sessions.
+- **Database Read-Only Mode**: Each app query runs in a read-only transaction; the README includes setup for a least-privilege database account.
 
 ### 🐘 5. Resilient Dual PostgreSQL Driver Architecture
 - **Automatic Fallback (`psycopg2` + `pg8000`)**: Resolves Windows Defender Application Control (WDAC) and Smart App Control binary DLL blocking policies on `_psycopg`.
@@ -57,6 +57,8 @@ flowchart LR
 - **Tab 3: SQL & Security Audit**: Raw SQL inspector displaying AST rule checklist, latency timing, and validation confirmation.
 - **Tab 4: Summary Metrics & KPIs**: High-impact KPI cards for Total, Average, Max, and Min metrics, plus an automatic **Top Performer Highlight Banner**.
 - **Automated AI Insights**: One-sentence executive summaries generated strictly from the returned dataset facts.
+- **Answer Provenance**: Shows the source table, metric selection, result size, runtime, and validated SQL.
+- **Follow-ups and Reports**: Continue with the previous question as context, save analyses for the current session, and export standalone HTML reports.
 
 ### 🧪 7. Automated Evaluation
 - **Intent and safety smoke checks**: `python evaluate_system.py` checks ambiguity handling, unsupported fields, and blocked SQL patterns.
@@ -76,8 +78,8 @@ The included evaluation prompts cover:
 ```text
 ├── .streamlit/
 │   └── config.toml         # Streamlit theme & server configuration
-├── app.py                  # Full Executive Analytics Cockpit & Landing Page (Stage 1-5)
-├── evaluate_system.py      # Automated Benchmark & Evaluation Suite (100% pass scorecard)
+├── app.py                  # Streamlit analytics app and query pipeline
+├── evaluate_system.py      # Intent and SQL-safety smoke checks
 ├── generate_sql.py         # Standalone CLI Text-to-SQL script with dual-driver support
 ├── clarification_engine.py # Interactive CLI ambiguity disambiguation engine
 ├── test_connection.py      # Database connectivity verification utility
