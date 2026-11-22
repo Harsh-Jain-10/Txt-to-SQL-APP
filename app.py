@@ -999,31 +999,41 @@ code, pre {
             if q_input not in st.session_state.query_history:
                 st.session_state.query_history.append(q_input)
 
-            with st.spinner("Analyzing intent..."):
+            with st.status("Understanding your question…", expanded=True) as query_status:
+                query_status.write("Checking the question against the available dataset")
                 analysis = analyze_intent(q_input)
 
             if analysis.is_unanswerable:
+                query_status.update(label="Question needs data the dataset does not contain", state="complete", expanded=False)
                 st.session_state.clarify_data = None
                 st.session_state.executed_data = None
                 msg = analysis.unanswerable_message or "That information isn't in the dataset. Available columns: customer_city, customer_state, product_category_name, price, freight_value, payment_value, payment_type, payment_installments, order_status, order_purchase_timestamp, year_of_purchase."
                 st.session_state.error_message = msg
             elif analysis.is_ambiguous and analysis.options:
+                query_status.update(label="A metric needs clarification", state="complete", expanded=False)
                 st.session_state.clarify_data = {"orig": q_input, "analysis": analysis}
                 st.session_state.executed_data = None
             else:
                 st.session_state.clarify_data = None
-                with st.spinner("Generating query..."):
+                query_status.update(label="Question understood", state="complete", expanded=False)
+                with st.status("Building and checking a read-only query…", expanded=True) as query_status:
+                    query_status.write("Generating SQL from the dataset schema")
                     raw_sql = generate_sql(q_input)
+                    query_status.write("Validating the SQL structure and table access")
                 is_valid, rejection_reason, safe_sql = validate_query(raw_sql)
                 if not is_valid:
+                    query_status.update(label="Query blocked by a safety check", state="error", expanded=False)
                     st.session_state.error_message = f"Security Alert: {rejection_reason}"
                     st.session_state.executed_data = None
                 else:
+                    query_status.update(label="Query passed safety checks", state="running", expanded=True)
                     df, latency, err = run_sql(safe_sql)
                     if err:
+                        query_status.update(label="Database could not run the query", state="error", expanded=False)
                         st.session_state.error_message = f"Execution Error: {err}"
                         st.session_state.executed_data = None
                     else:
+                        query_status.update(label="Analysis ready", state="complete", expanded=False)
                         st.session_state.executed_data = {
                             "orig": q_input,
                             "label": None,
