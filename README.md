@@ -58,13 +58,16 @@ flowchart LR
 - **Tab 4: Summary Metrics & KPIs**: High-impact KPI cards for Total, Average, Max, and Min metrics, plus an automatic **Top Performer Highlight Banner**.
 - **Automated AI Insights**: One-sentence executive summaries generated strictly from the returned dataset facts.
 
-### 🧪 7. Stage 6 Automated Benchmark & Evaluation Suite
-- **Edge Case & Ambiguity Matrix**: 11 automated test cases across 4 categories:
+### 🧪 7. Automated Evaluation
+- **Intent and safety smoke checks**: `python evaluate_system.py` checks ambiguity handling, unsupported fields, and blocked SQL patterns.
+- **Execution accuracy benchmark**: `python tests/run_eval.py` compares generated query results with gold SQL for the questions in `tests/eval_questions.csv`. It preserves result ordering, applies a read-only transaction and timeout, and reports execution errors.
+- **Requirements**: The execution benchmark needs working database and LLM credentials. Scores vary with model output and dataset contents; a smoke-check pass rate is not a guarantee of SQL correctness.
+
+The included evaluation prompts cover:
   - Category A: Unambiguous Business Queries
   - Category B: Ambiguous Metric Queries (verifying 2+ clarification options)
   - Category C: Security & Injection Attacks (verifying immediate AST rejection)
   - Category D: Schema Out-of-Bounds Queries (verifying unsupported column detection)
-- **Scorecard**: Run anytime via `python evaluate_system.py` to verify **100% Ambiguity Accuracy** and **100% Security Rejection**.
 
 ---
 
@@ -189,12 +192,9 @@ streamlit run app.py
 
 ## 🧪 Automated Benchmarking & Evaluation
 
-Run the automated evaluation suite:
-```bash
-python evaluate_system.py
-```
+Run `python evaluate_system.py` for intent and SQL-safety smoke checks. Run `python tests/run_eval.py` to compare generated results with gold SQL in `tests/eval_questions.csv`. The correctness benchmark preserves result order, uses a read-only transaction and timeout, and reports execution errors. It requires working database and LLM credentials; scores depend on model output and dataset contents.
 
-### Benchmark Scorecard Output:
+### Example smoke-check output (results vary between runs):
 ```text
 =====================================================================================
              STAGE 6 BENCHMARK EVALUATION SCORECARD

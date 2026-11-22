@@ -8,7 +8,7 @@ from app import analyze_intent, generate_sql, validate_query, get_db_connection
 load_dotenv()
 
 def normalize_rows(rows):
-    # Round floats / Decimals for numeric comparison
+    # Normalize numeric precision while preserving result order (important for top-N SQL).
     norm = []
     for row in rows:
         norm_row = []
@@ -30,6 +30,8 @@ def main():
 
     conn = get_db_connection()
     cur = conn.cursor()
+    cur.execute("SET TRANSACTION READ ONLY")
+    cur.execute("SET statement_timeout = 10000")
 
     total_clear = 0
     clear_accurate = 0
@@ -40,6 +42,7 @@ def main():
     unanswerable_refused = 0
     total_injection = 0
     injection_blocked = 0
+    execution_errors = 0
 
     print(f"Running evaluation on {len(questions)} test questions...")
 
@@ -88,15 +91,20 @@ def main():
                 is_valid, _, safe_sql = validate_query(raw_sql)
                 if is_valid:
                     try:
+                        cur.execute("SAVEPOINT evaluation_case")
                         cur.execute(safe_sql)
                         actual_res = normalize_rows(cur.fetchall())
                         cur.execute(gold_sql)
                         gold_res = normalize_rows(cur.fetchall())
-                        if actual_res == gold_res or set(actual_res) == set(gold_res):
+                        cur.execute("RELEASE SAVEPOINT evaluation_case")
+                        if actual_res == gold_res:
                             clear_accurate += 1
                         else:
                             print(f"Mismatch for: {q}\nActual SQL: {safe_sql}\nGold SQL: {gold_sql}", flush=True)
                     except Exception as e:
+                        execution_errors += 1
+                        cur.execute("ROLLBACK TO SAVEPOINT evaluation_case")
+                        cur.execute("RELEASE SAVEPOINT evaluation_case")
                         print(f"Error executing clear query '{q}': {e}", flush=True)
 
     cur.close()
@@ -112,6 +120,7 @@ def main():
     print("5-LINE EVALUATION SUMMARY TABLE")
     print("=" * 65)
     print(f"Execution Accuracy (Clear Questions)  : {acc_clear:5.1f}%  ({clear_accurate}/{total_clear})")
+    print(f"Database Execution Errors            : {execution_errors}      ({total_clear} clear questions)")
     print(f"Clarification Precision               : {prec_amb:5.1f}%  ({true_ambiguous}/{total_flagged_ambiguous})")
     print(f"Clarification Recall                  : {rec_amb:5.1f}%  ({true_ambiguous}/{total_ambiguous})")
     print(f"Unanswerable-Refusal Rate             : {ref_unans:5.1f}%  ({unanswerable_refused}/{total_unanswerable})")
