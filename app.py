@@ -1,4 +1,5 @@
 import os, json, time, io, textwrap
+from html import escape
 from decimal import Decimal
 import streamlit as st
 import pandas as pd
@@ -191,6 +192,17 @@ def generate_insight(rows: list, title: str) -> str:
         return res.choices[0].message.content.strip().replace('"', '')
     except Exception:
         return ""
+
+def build_analysis_report(question: str, metric: Optional[str], sql: str, df: pd.DataFrame, latency: float) -> str:
+    """Build a portable HTML report containing the answer and its provenance."""
+    label = escape(metric or "As requested")
+    safe_question = escape(question)
+    safe_sql = escape(sql)
+    table_html = df.to_html(index=False, escape=True, border=0, classes="results")
+    return f"""<!doctype html><html><head><meta charset="utf-8"><title>Clari Analyzer Report</title>
+    <style>body{{font:15px system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:0 20px;color:#172033}}h1{{color:#4f46e5}}.meta{{color:#475569}}pre{{background:#f1f5f9;padding:16px;border-radius:8px;white-space:pre-wrap}}table{{border-collapse:collapse;width:100%;margin-top:20px}}th,td{{border:1px solid #e2e8f0;padding:8px;text-align:left}}th{{background:#eef2ff}}</style></head>
+    <body><h1>Clari Analyzer</h1><p><b>Question:</b> {safe_question}</p><p class="meta"><b>Metric:</b> {label} · <b>Source:</b> digital_store_sales · <b>Rows:</b> {len(df):,} · <b>Runtime:</b> {latency} ms</p>
+    <h2>Result</h2>{table_html}<h2>Validated SQL</h2><pre>{safe_sql}</pre></body></html>"""
 
 # =============================================================================
 # 5. Database Runner
@@ -858,6 +870,7 @@ code, pre {
         ("error_message", None),
         ("current_input", "Top 5 cities by order count"),
         ("query_history", []),
+        ("saved_analyses", []),
         ("followup_context", None),
         ("trigger_run", False)
     ]:
@@ -968,6 +981,16 @@ code, pre {
                         st.session_state.executed_data = None
                         st.session_state.trigger_run = True
                         st.rerun()
+
+            if st.session_state.saved_analyses:
+                with st.expander(f"Saved analyses ({len(st.session_state.saved_analyses)})", expanded=False):
+                    for idx, saved in enumerate(reversed(st.session_state.saved_analyses)):
+                        if st.button(saved["question"], key=f"saved_{idx}", use_container_width=True):
+                            st.session_state.current_input = saved["question"]
+                            st.session_state.clarify_data = None
+                            st.session_state.executed_data = None
+                            st.session_state.trigger_run = True
+                            st.rerun()
 
             st.markdown('<hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />', unsafe_allow_html=True)
             if st.button("Sign Out", key="sidebar_signout", use_container_width=True):
@@ -1169,6 +1192,19 @@ code, pre {
                 st.write("**Safety:** SQL parsed as a single, read-only SELECT and restricted to the approved dataset table.")
                 st.write("**Returned columns:** " + ", ".join(str(column) for column in df.columns))
                 st.code(safe_sql, language="sql")
+            report_html = build_analysis_report(orig_q, lbl, safe_sql, df, exec_time_ms)
+            export_col, save_col = st.columns([1, 1])
+            export_col.download_button(
+                "Download analysis report",
+                data=report_html,
+                file_name="clari_analysis_report.html",
+                mime="text/html",
+                use_container_width=True
+            )
+            if save_col.button("Save to session", use_container_width=True):
+                if not any(item["question"] == orig_q and item["sql"] == safe_sql for item in st.session_state.saved_analyses):
+                    st.session_state.saved_analyses.append({"question": orig_q, "label": lbl, "sql": safe_sql, "report": report_html})
+                st.toast("Analysis saved for this session")
 
             st.markdown("#### Explore the answer")
             tab_chart, tab_table, tab_audit, tab_summary = st.tabs(["Visual", "Data", "Query & Safety", "Metrics"])
