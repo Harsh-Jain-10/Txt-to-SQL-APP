@@ -558,12 +558,12 @@ header, header[data-testid="stHeader"] {
 
 /* Hero Banner */
 .hero-banner {
-    background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(245,243,255,0.95) 50%, rgba(253,242,248,0.92) 100%);
-    border: 1px solid rgba(224, 231, 255, 0.9);
-    border-radius: 16px;
-    padding: 24px 28px;
+    background: radial-gradient(circle at 92% 0%, rgba(129,140,248,.3), transparent 32%), linear-gradient(120deg, #111827 0%, #25234A 62%, #452451 100%);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 22px;
+    padding: 30px 34px;
     margin-bottom: 22px;
-    box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(99, 102, 241, 0.05);
+    box-shadow: 0 18px 40px -16px rgba(30,27,75,.45);
     position: relative;
     overflow: hidden;
 }
@@ -572,8 +572,13 @@ header, header[data-testid="stHeader"] {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #6366F1, #8B5CF6, #EC4899, #06B6D4);
+    background: linear-gradient(90deg, #818CF8, #C084FC, #F0ABFC, #67E8F9);
 }
+.hero-banner .hero-title { color:#F8FAFC; }
+.hero-banner .gradient-text { background:linear-gradient(90deg,#C4B5FD,#F0ABFC,#67E8F9); -webkit-background-clip:text; }
+.hero-banner .hero-sub { color:#CBD5E1 !important; }
+.hero-banner .hero-badge { color:#E0E7FF; background:rgba(255,255,255,.09); border-color:rgba(255,255,255,.18); }
+.hero-banner .tech-pill { background:rgba(255,255,255,.08); color:#E2E8F0; border-color:rgba(255,255,255,.12); }
 
 .hero-badge {
     display: inline-flex;
@@ -710,8 +715,8 @@ header, header[data-testid="stHeader"] {
     border-radius: 10px !important;
     font-size: 13.5px !important;
     font-weight: 500 !important;
-    background: #FFFFFF !important;
-    border: 1.5px solid #E2E8F0 !important;
+    background: linear-gradient(135deg,#FFFFFF,#F5F3FF) !important;
+    border: 1px solid #DDD6FE !important;
     color: #1E293B !important;
     height: 42px !important;
     transition: all 0.2s ease !important;
@@ -727,16 +732,20 @@ header, header[data-testid="stHeader"] {
 
 /* Cards */
 .active-query {
-    background: linear-gradient(90deg, #F5F3FF 0%, #FFFFFF 100%);
-    border: 1px solid #DDD6FE;
-    border-left: 4px solid #7C3AED;
-    border-radius: 12px;
-    padding: 14px 18px;
-    font-size: 15px;
+    background: linear-gradient(110deg,#171A35 0%,#30254D 100%);
+    border: 1px solid #4C4478;
+    border-left: 5px solid #A78BFA;
+    border-radius: 14px;
+    padding: 18px 22px;
+    font-size: 16px;
     color: #0F172A;
     margin: 18px 0;
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.06);
 }
+.active-query, .active-query b { color:#F8FAFC; }
+.st-key-query_composer { background:#FFFFFF; border:1px solid #E2E8F0; border-radius:20px; padding:22px 24px 12px !important; box-shadow:0 12px 30px rgba(15,23,42,.06); }
+.query-composer-title { color:#111827; font-size:18px; font-weight:800; letter-spacing:-.02em; margin-bottom:3px; }
+.query-composer-copy { color:#64748B; font-size:12px; margin-bottom:12px; }
 
 .neutral-card {
     background: #FFFFFF;
@@ -1056,28 +1065,32 @@ code, pre {
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div style="margin-top: 12px;"></div>', unsafe_allow_html=True)
-        query_col, mic_col, btn_col = st.columns([5, 0.6, 1], vertical_alignment="bottom")
-        with query_col:
-            q_input = st.text_input(
-                "Enter your business query:",
-                value=st.session_state.current_input,
-                placeholder="e.g. Show top 5 customer cities by total spending"
-            )
-        with mic_col:
-            st.markdown(
-                '<div style="padding-bottom: 4px;">'
-                '<div style="font-size: 14px; font-weight: 600; color: #0F172A; margin-bottom: 6px;">Voice</div>',
-                unsafe_allow_html=True
-            )
-            audio = mic_recorder(
-                start_prompt="🎙️",
-                stop_prompt="⏹️",
-                just_once=True,
-                use_container_width=True,
-                key="voice_input"
-            )
-            st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True, key="query_composer"):
+            st.markdown('<div class="query-composer-title">Start with a business question</div><div class="query-composer-copy">Ask in plain language. Clari checks the metric, validates the SQL, and shows its work.</div>', unsafe_allow_html=True)
+            query_col, mic_col, btn_col = st.columns([5, 0.65, 1.25], vertical_alignment="bottom")
+            with query_col:
+                q_input = st.text_input(
+                    "Your question",
+                    value=st.session_state.current_input,
+                    placeholder="e.g. Compare monthly orders across the top 5 states"
+                )
+            with mic_col:
+                st.markdown(
+                    '<div style="padding-bottom: 4px;">'
+                    '<div style="font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px;">VOICE</div>',
+                    unsafe_allow_html=True
+                )
+                audio = mic_recorder(
+                    start_prompt="🎙️",
+                    stop_prompt="⏹️",
+                    just_once=True,
+                    use_container_width=True,
+                    key="voice_input"
+                )
+                st.markdown('</div>', unsafe_allow_html=True)
+            with btn_col:
+                is_empty = not bool(q_input and q_input.strip())
+                run_btn = st.button("Analyze data", icon=":material/arrow_forward:", type="primary", use_container_width=True, disabled=is_empty)
 
         # --- Handle voice transcription ---
         if audio and audio.get("bytes"):
@@ -1092,10 +1105,6 @@ code, pre {
                         st.rerun()
                 except Exception as e:
                     st.warning(f"Voice transcription failed: {e}")
-
-        with btn_col:
-            is_empty = not bool(q_input and q_input.strip())
-            run_btn = st.button("Analyze & Query", icon=":material/search:", type="primary", use_container_width=True, disabled=is_empty)
 
         if (run_btn or st.session_state.trigger_run) and q_input and q_input.strip():
             st.session_state.trigger_run = False
