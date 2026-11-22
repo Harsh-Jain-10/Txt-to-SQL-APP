@@ -153,6 +153,17 @@ ADMIN_USER=admin
 ADMIN_PASSWORD=admin123
 ```
 
+For a safer deployment, connect with a dedicated PostgreSQL account that only has read access to the analytics table. Run this as a database administrator, then set `DB_USER` to `analytics_reader` in `.env`:
+
+```sql
+CREATE ROLE analytics_reader LOGIN PASSWORD 'replace-with-a-strong-password';
+GRANT CONNECT ON DATABASE digital_store TO analytics_reader;
+GRANT USAGE ON SCHEMA public TO analytics_reader;
+GRANT SELECT ON TABLE public.digital_store_sales TO analytics_reader;
+```
+
+The app also starts each query in a read-only transaction and applies a 10-second statement timeout. The sidebar checks database connectivity and reports the table row count; the status is cached for 30 seconds.
+
 ---
 
 ## 💻 Running the Application

@@ -223,12 +223,32 @@ def get_db_connection():
         port=port
     )
 
+@st.cache_data(ttl=30, show_spinner=False)
+def check_database_health() -> tuple[bool, Optional[int], Optional[str]]:
+    """Check PostgreSQL connectivity and dataset availability for the sidebar."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT COUNT(*) FROM digital_store_sales")
+            row_count = int(cur.fetchone()[0])
+        finally:
+            cur.close()
+        return True, row_count, None
+    except Exception as exc:
+        return False, None, str(exc)
+    finally:
+        if conn is not None:
+            conn.close()
+
 def run_sql(sql: str) -> tuple[pd.DataFrame, float, Optional[str]]:
     start_time = time.time()
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         try:
+            cur.execute("SET TRANSACTION READ ONLY")
             cur.execute("SET statement_timeout = 10000;")
             cur.execute(sql)
             columns = [d[0] for d in cur.description]
@@ -890,7 +910,11 @@ code, pre {
                 <div style="font-size: 18px; font-weight: 800; color: #0F172A;">Clari <span class="gradient-text">Analyzer</span></div>
             </div>
             """, unsafe_allow_html=True)
-            st.markdown('<span class="status-pill">🟢 PostgreSQL: Connected (113,390 rows)</span>', unsafe_allow_html=True)
+            db_ok, db_rows, db_error = check_database_health()
+            if db_ok:
+                st.markdown(f'<span class="status-pill">🟢 PostgreSQL: Connected ({db_rows:,} rows)</span>', unsafe_allow_html=True)
+            else:
+                st.error("PostgreSQL is unavailable. Check the database settings.")
             st.markdown(f'<div style="font-size: 13px; color: #475569; margin-top: 6px;">👤 Operator: <b style="color: #4F46E5;">{ADMIN_USER}</b></div>', unsafe_allow_html=True)
             
             st.markdown('<hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />', unsafe_allow_html=True)
