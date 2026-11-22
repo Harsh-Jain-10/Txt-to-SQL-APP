@@ -129,7 +129,8 @@ def validate_query(sql: str) -> tuple[bool, str, str]:
 # =============================================================================
 # 4. Intent Analysis & SQL Generation
 # =============================================================================
-def analyze_intent(q: str, is_retry: bool = False) -> IntentAnalysis:
+def analyze_intent(q: str, is_retry: bool = False, context: Optional[str] = None) -> IntentAnalysis:
+    question_context = f"Previous analysis: {context}\nFollow-up question: {q}" if context else q
     prompt = (
         f"Analyze this e-commerce analytics question for table digital_store_sales.\n"
         f"{SCHEMA}\n{METRIC_RULES}\n\n"
@@ -142,7 +143,7 @@ def analyze_intent(q: str, is_retry: bool = False) -> IntentAnalysis:
         f"   Each option's sql must be valid PostgreSQL SELECT on digital_store_sales (defaulting to LIMIT 10 for most selling product).\n"
         f"3. Clear: Specific unambiguous metric and dimension (e.g. 'Top 5 cities by order count', 'Total orders delivered', 'Orders per year').\n"
         f"   Set is_ambiguous=false, is_unanswerable=false, question=null, options=[]\n\n"
-        f"Question: '{q}'\n"
+        f"Question: '{question_context}'\n"
         f"Return JSON: {{\"is_ambiguous\": bool, \"is_unanswerable\": bool, \"unanswerable_message\": str or null, \"question\": str or null, \"options\": [{{\"label\": str, \"description\": str, \"sql\": str}}]}}"
     )
     try:
@@ -169,12 +170,12 @@ def analyze_intent(q: str, is_retry: bool = False) -> IntentAnalysis:
     except Exception:
         return IntentAnalysis(is_ambiguous=False)
 
-def generate_sql(q: str) -> str:
+def generate_sql(q: str, context: Optional[str] = None) -> str:
     prompt = (
         f"You are a PostgreSQL expert. Return ONLY raw SQL without markdown or backticks.\n"
         f"{SCHEMA}\n{METRIC_RULES}\n"
         f"Strict: Select ONLY the specific metric/columns asked for in the question. Do not add unrequested columns.\n"
-        f"Question: {q}"
+        f"Question: {f'Previous analysis: {context}\\nFollow-up question: {q}' if context else q}"
     )
     res = call_groq([{"role": "user", "content": prompt}], json_mode=False)
     return res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
@@ -815,6 +816,7 @@ code, pre {
         ("error_message", None),
         ("current_input", "Top 5 cities by order count"),
         ("query_history", []),
+        ("followup_context", None),
         ("trigger_run", False)
     ]:
         if key not in st.session_state:
@@ -1010,9 +1012,11 @@ code, pre {
             if q_input not in st.session_state.query_history:
                 st.session_state.query_history.append(q_input)
 
+            followup_context = st.session_state.followup_context
+            st.session_state.followup_context = None
             with st.status("Understanding your question…", expanded=True) as query_status:
                 query_status.write("Checking the question against the available dataset")
-                analysis = analyze_intent(q_input)
+                analysis = analyze_intent(q_input, context=followup_context)
 
             if analysis.is_unanswerable:
                 query_status.update(label="Question needs data the dataset does not contain", state="complete", expanded=False)
@@ -1029,7 +1033,7 @@ code, pre {
                 query_status.update(label="Question understood", state="complete", expanded=False)
                 with st.status("Building and checking a read-only query…", expanded=True) as query_status:
                     query_status.write("Generating SQL from the dataset schema")
-                    raw_sql = generate_sql(q_input)
+                    raw_sql = generate_sql(q_input, context=followup_context)
                     query_status.write("Validating the SQL structure and table access")
                 is_valid, rejection_reason, safe_sql = validate_query(raw_sql)
                 if not is_valid:
@@ -1169,6 +1173,24 @@ code, pre {
                         """, unsafe_allow_html=True)
                 else:
                     st.metric("Total Records Identified", len(df))
+
+            with st.form("followup_question_form", clear_on_submit=True):
+                followup_question = st.text_input(
+                    "Ask a follow-up",
+                    placeholder="e.g. Break that down by state, or compare with 2017",
+                    help="Your next question will keep this analysis as context."
+                )
+                followup_submit = st.form_submit_button(
+                    "Continue analysis", type="primary",
+                    disabled=not bool(followup_question.strip())
+                )
+                if followup_submit:
+                    st.session_state.followup_context = orig_q
+                    st.session_state.current_input = followup_question.strip()
+                    st.session_state.clarify_data = None
+                    st.session_state.executed_data = None
+                    st.session_state.trigger_run = True
+                    st.rerun()
         elif not st.session_state.clarify_data and not st.session_state.error_message:
             st.markdown('<div style="font-size: 14px; color: #475569; text-align: center; padding: 48px 0;">Enter a query above or choose a preset prompt to begin analysis.</div>', unsafe_allow_html=True)
 
