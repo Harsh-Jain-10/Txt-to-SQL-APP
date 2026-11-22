@@ -898,6 +898,17 @@ code, pre {
                     unsafe_allow_html=True
                 )
 
+            with st.expander("Metric glossary", expanded=False):
+                st.markdown("""
+                **Orders** — distinct `order_id` values.  
+                **Units sold** — dataset rows (line items); one order may contain multiple rows.  
+                **Item revenue** — sum of `price` across line items.  
+                **Payments collected** — sum of distinct order payment values.  
+                **Customer-paid line total** — `price` plus `freight_value`.
+
+                This dataset contains Brazilian e-commerce records from 2016–2018. It does not include profit, discounts, ratings, or customer contact details.
+                """)
+
             st.markdown('<hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />', unsafe_allow_html=True)
 
             if st.session_state.query_history:
