@@ -176,7 +176,7 @@ def generate_sql(q: str, context: Optional[str] = None) -> str:
         f"You are a PostgreSQL expert. Return ONLY raw SQL without markdown or backticks.\n"
         f"{SCHEMA}\n{METRIC_RULES}\n"
         f"Strict: Select ONLY the specific metric/columns asked for in the question. Do not add unrequested columns.\n"
-        f"Question: {f'Previous analysis: {context}\\nFollow-up question: {q}' if context else q}"
+        f"Question: Previous analysis: {context}\nFollow-up question: {q}" if context else f"Question: {q}"
     )
     res = call_groq([{"role": "user", "content": prompt}], json_mode=False)
     return res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
