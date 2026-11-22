@@ -1,4 +1,4 @@
-import os, json, time, io, textwrap
+import os, json, time, io, textwrap, re
 from html import escape
 from decimal import Decimal
 import streamlit as st
@@ -140,7 +140,7 @@ def analyze_intent(q: str, is_retry: bool = False, context: Optional[str] = None
         f"   Set is_unanswerable=true, is_ambiguous=false, unanswerable_message=\"That information isn't in the dataset. Available columns: customer_city, customer_state, product_category_name, price, freight_value, payment_value, payment_type, payment_installments, order_status, order_purchase_timestamp, year_of_purchase.\", question=null, options=[]\n"
         f"2. Ambiguous: Query has multiple metric interpretations or ambiguity keywords ('revenue', 'sales', 'best', 'most selling' [units vs revenue vs orders], 'top customers'; time: 'recent', 'last year' without year; entity: 'customers').\n"
         f"   Always classify queries containing 'revenue', 'sales', 'best', or 'most selling' (e.g. 'Show me the most selling product') as Ambiguous.\n"
-        f"   Set is_ambiguous=true, is_unanswerable=false, question=\"real clarification question addressing ambiguity (never echo user query)\", options=[2 to 4 items with label, description, sql].\n"
+        f"   Set is_ambiguous=true, is_unanswerable=false, question=\"real clarification question addressing ambiguity (never echo user query)\", options=[2 to 4 items with a concise metric label (e.g. Item revenue, Orders, Units sold), description, sql]. Never use generic labels like Option 1.\n"
         f"   Each option's sql must be valid PostgreSQL SELECT on digital_store_sales (defaulting to LIMIT 10 for most selling product).\n"
         f"3. Clear: Specific unambiguous metric and dimension (e.g. 'Top 5 cities by order count', 'Total orders delivered', 'Orders per year').\n"
         f"   Set is_ambiguous=false, is_unanswerable=false, question=null, options=[]\n\n"
@@ -157,6 +157,8 @@ def analyze_intent(q: str, is_retry: bool = False, context: Optional[str] = None
                 is_valid, _, safe_sql = validate_query(opt.sql)
                 if is_valid:
                     opt.sql = safe_sql
+                    if re.fullmatch(r"option\s*\d+", opt.label.strip(), flags=re.IGNORECASE):
+                        opt.label = re.split(r"\s+[–—-]\s+", opt.description.strip(), maxsplit=1)[0][:60]
                     valid_opts.append(opt)
             if len(valid_opts) >= 2:
                 analysis.options = valid_opts
@@ -172,14 +174,32 @@ def analyze_intent(q: str, is_retry: bool = False, context: Optional[str] = None
         return IntentAnalysis(is_ambiguous=False)
 
 def generate_sql(q: str, context: Optional[str] = None) -> str:
-    prompt = (
-        f"You are a PostgreSQL expert. Return ONLY raw SQL without markdown or backticks.\n"
-        f"{SCHEMA}\n{METRIC_RULES}\n"
-        f"Strict: Select ONLY the specific metric/columns asked for in the question. Do not add unrequested columns.\n"
-        f"Question: Previous analysis: {context}\nFollow-up question: {q}" if context else f"Question: {q}"
+    question_context = f"Previous analysis: {context}\nFollow-up question: {q}" if context else q
+    base_prompt = (
+        "Generate exactly one PostgreSQL SELECT statement for the approved table digital_store_sales. "
+        "Use only columns in the schema. Do not include commentary, Markdown, examples, or a semicolon. "
+        "Count orders with COUNT(DISTINCT order_id). Return a JSON object with one string property named sql.\n"
+        f"{SCHEMA}\n{METRIC_RULES}\nQuestion: {question_context}"
     )
-    res = call_groq([{"role": "user", "content": prompt}], json_mode=False)
-    return res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
+    validation_error = "No SQL was returned."
+    for attempt in range(2):
+        prompt = base_prompt if attempt == 0 else (
+            f"{base_prompt}\nThe previous response was invalid: {validation_error} "
+            "Return only a corrected JSON object containing one approved SELECT query."
+        )
+        response = call_groq([
+            {"role": "system", "content": "You generate safe, schema-grounded PostgreSQL. Follow the requested JSON format exactly."},
+            {"role": "user", "content": prompt}
+        ], json_mode=True)
+        try:
+            sql = json.loads(response.choices[0].message.content).get("sql", "").strip()
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            sql = ""
+        if sql:
+            is_valid, validation_error, safe_sql = validate_query(sql)
+            if is_valid:
+                return safe_sql
+    raise RuntimeError(f"Could not generate a safe query: {validation_error}")
 
 def generate_insight(rows: list, title: str) -> str:
     try:
@@ -1088,36 +1108,47 @@ code, pre {
                 analysis = analyze_intent(q_input, context=followup_context)
 
             if analysis.is_unanswerable:
-                query_status.update(label="Question needs data the dataset does not contain", state="complete", expanded=False)
+                query_status.write("The requested fields are outside the available dataset")
+                query_status.update(label="Question needs data the dataset does not contain", state="complete", expanded=True)
                 st.session_state.clarify_data = None
                 st.session_state.executed_data = None
                 msg = analysis.unanswerable_message or "That information isn't in the dataset. Available columns: customer_city, customer_state, product_category_name, price, freight_value, payment_value, payment_type, payment_installments, order_status, order_purchase_timestamp, year_of_purchase."
                 st.session_state.error_message = msg
             elif analysis.is_ambiguous and analysis.options:
-                query_status.update(label="A metric needs clarification", state="complete", expanded=False)
+                query_status.write("The question has more than one valid metric interpretation")
+                query_status.update(label="A metric needs clarification", state="complete", expanded=True)
                 st.session_state.clarify_data = {"orig": q_input, "analysis": analysis}
                 st.session_state.executed_data = None
             else:
                 st.session_state.clarify_data = None
-                query_status.update(label="Question understood", state="complete", expanded=False)
+                query_status.write("Intent is clear; preparing a safe SQL query")
+                query_status.update(label="Question understood", state="complete", expanded=True)
                 with st.status("Building and checking a read-only query…", expanded=True) as query_status:
                     query_status.write("Generating SQL from the dataset schema")
-                    raw_sql = generate_sql(q_input, context=followup_context)
-                    query_status.write("Validating the SQL structure and table access")
-                is_valid, rejection_reason, safe_sql = validate_query(raw_sql)
+                    try:
+                        raw_sql = generate_sql(q_input, context=followup_context)
+                        query_status.write("Validating the SQL structure and table access")
+                        is_valid, rejection_reason, safe_sql = validate_query(raw_sql)
+                    except Exception as exc:
+                        is_valid, rejection_reason, safe_sql = False, f"SQL generation failed: {exc}", ""
                 if not is_valid:
-                    query_status.update(label="Query blocked by a safety check", state="error", expanded=False)
+                    query_status.write(f"Validation stopped the query: {rejection_reason}")
+                    query_status.update(label="Query could not pass SQL generation or safety checks", state="error", expanded=True)
                     st.session_state.error_message = f"Security Alert: {rejection_reason}"
                     st.session_state.executed_data = None
                 else:
-                    query_status.update(label="Query passed safety checks", state="running", expanded=True)
+                    query_status.write("SQL passed the read-only and table-access checks")
+                    query_status.write("Running the approved query on PostgreSQL")
+                    query_status.update(label="Query passed safety checks; running it now", state="running", expanded=True)
                     df, latency, err = run_sql(safe_sql)
                     if err:
-                        query_status.update(label="Database could not run the query", state="error", expanded=False)
+                        query_status.write(f"Database error: {err}")
+                        query_status.update(label="Database could not run the query", state="error", expanded=True)
                         st.session_state.error_message = f"Execution Error: {err}"
                         st.session_state.executed_data = None
                     else:
-                        query_status.update(label="Analysis ready", state="complete", expanded=False)
+                        query_status.write(f"Analysis returned {len(df):,} row(s) in {latency} ms")
+                        query_status.update(label="Analysis ready", state="complete", expanded=True)
                         st.session_state.executed_data = {
                             "orig": q_input,
                             "label": None,
@@ -1148,23 +1179,32 @@ code, pre {
                     with st.expander("Show SQL", expanded=False):
                         st.code(opt.sql, language="sql")
                     if st.button("Select", key=f"clarify_{i}", use_container_width=True):
-                        is_valid, rej, safe_sql = validate_query(opt.sql)
-                        if not is_valid:
-                            st.session_state.error_message = f"Security Alert: {rej}"
-                        else:
-                            df, latency, err = run_sql(safe_sql)
-                            if err:
-                                st.session_state.error_message = f"Execution Error: {err}"
+                        with st.status("Running the selected interpretation…", expanded=True) as selection_status:
+                            selection_status.write(f"Validating the selected metric: {opt.label}")
+                            is_valid, rej, safe_sql = validate_query(opt.sql)
+                            if not is_valid:
+                                st.session_state.error_message = f"Security Alert: {rej}"
+                                selection_status.write(f"Validation stopped the query: {rej}")
+                                selection_status.update(label="Selected query blocked by safety checks", state="error", expanded=True)
                             else:
-                                st.session_state.executed_data = {
-                                    "orig": orig,
-                                    "label": opt.label,
-                                    "sql": safe_sql,
-                                    "df": df,
-                                    "latency": latency
-                                }
+                                selection_status.write("Executing read-only SQL on PostgreSQL")
+                                df, latency, err = run_sql(safe_sql)
+                                if err:
+                                    st.session_state.error_message = f"Execution Error: {err}"
+                                    selection_status.write(f"Database error: {err}")
+                                    selection_status.update(label="Database could not run the query", state="error", expanded=True)
+                                else:
+                                    selection_status.write(f"Analysis returned {len(df):,} row(s) in {latency} ms")
+                                    selection_status.update(label="Analysis ready", state="complete", expanded=True)
+                                    st.session_state.error_message = None
+                                    st.session_state.executed_data = {
+                                        "orig": orig,
+                                        "label": opt.label,
+                                        "sql": safe_sql,
+                                        "df": df,
+                                        "latency": latency
+                                    }
                         st.session_state.clarify_data = None
-                        st.rerun()
                     st.markdown('</div>', unsafe_allow_html=True)
 
         if st.session_state.executed_data:
@@ -1277,16 +1317,19 @@ code, pre {
                     help="Your next question will keep this analysis as context."
                 )
                 followup_submit = st.form_submit_button(
-                    "Continue analysis", type="primary",
-                    disabled=not bool(followup_question.strip())
+                    "Continue analysis", type="primary"
                 )
                 if followup_submit:
-                    st.session_state.followup_context = orig_q
-                    st.session_state.current_input = followup_question.strip()
-                    st.session_state.clarify_data = None
-                    st.session_state.executed_data = None
-                    st.session_state.trigger_run = True
-                    st.rerun()
+                    if not followup_question.strip():
+                        st.warning("Enter a follow-up question to continue.")
+                    else:
+                        selected_metric = f" (selected metric: {lbl})" if lbl else ""
+                        st.session_state.followup_context = f"{orig_q}{selected_metric}"
+                        st.session_state.current_input = followup_question.strip()
+                        st.session_state.clarify_data = None
+                        st.session_state.executed_data = None
+                        st.session_state.trigger_run = True
+                        st.rerun()
         elif not st.session_state.clarify_data and not st.session_state.error_message:
             st.markdown('<div style="font-size: 14px; color: #475569; text-align: center; padding: 48px 0;">Enter a query above or choose a preset prompt to begin analysis.</div>', unsafe_allow_html=True)
 
