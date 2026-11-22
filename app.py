@@ -1111,6 +1111,19 @@ code, pre {
             safe_sql = ed["sql"]
             exec_time_ms = ed["latency"]
 
+            st.markdown("#### Answer provenance")
+            provenance_cols = st.columns(4)
+            provenance_cols[0].metric("Source", "digital_store_sales")
+            provenance_cols[1].metric("Rows returned", f"{len(df):,}")
+            provenance_cols[2].metric("Runtime", f"{exec_time_ms} ms")
+            provenance_cols[3].metric("Metric choice", lbl or "As requested")
+            with st.expander("How this answer was produced", expanded=False):
+                st.write(f"**Question:** {orig_q}")
+                st.write(f"**Dataset:** `digital_store_sales` — Brazilian e-commerce records.")
+                st.write("**Safety:** SQL parsed as a single, read-only SELECT and restricted to the approved dataset table.")
+                st.write("**Returned columns:** " + ", ".join(str(column) for column in df.columns))
+                st.code(safe_sql, language="sql")
+
             tab_chart, tab_table, tab_audit, tab_summary = st.tabs(["Chart", "Table", "SQL & Guardrail Audit", "Summary Metrics"])
 
             with tab_chart:
